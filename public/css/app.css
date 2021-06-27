@@ -10014,3 +10014,14 @@ h3 {
     border-color: #dee2e6;
   }
 }
+.stock-col {
+  width: 35%;
+}
+
+.symbol-col {
+  width: 10%;
+}
+
+.serial-no {
+  width: 2%;
+}

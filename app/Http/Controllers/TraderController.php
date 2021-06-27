@@ -26,7 +26,6 @@ class TraderController extends Controller
 
                 $adx = Trader::adx($high, $low, $close, 14);
                 $rsi = Trader::rsi($close, 14);
-                // $macd = Trader::macd($close, 12, 26, 9);
 
                 $reverse_adx = array_reverse($adx);
                 $reverse_rsi = array_reverse($rsi);
@@ -37,21 +36,18 @@ class TraderController extends Controller
                 $rsi_today = $reverse_rsi[0];
                 $rsi_yesterday = $reverse_rsi[1];
 
-                if($adx_today > $adx_yesterday && $adx_today > 23 && $adx_today < 30 && $rsi_today > $rsi_yesterday && $rsi_today > 50){
-                    // $this->buyStocks[$stock->symbol] = [
-                    //     'RSI' => $reverse_rsi,
-                    //     'ADX' => $reverse_adx
-                    // ];
-                    array_push($this->buyStocks, $stock->symbol);
+                if($adx_today > $adx_yesterday && $adx_today > 23 && $rsi_today > $rsi_yesterday && $rsi_today > 50){
+                    $this->buyStocks[$stock->symbol] = [
+                        'stock' => $stock,
+                        'reverse_RSI' => $reverse_rsi,
+                        'reverse_ADX' => $reverse_adx,
+                    ];
                 }
             }
             
         }
-        // $priceHistory = Stock::where('symbol','ADBL')->first()->priceHistory;
-
         
-        return $this->buyStocks;
-        return array_reverse($rsi);
+        return response()->json($this->buyStocks);;
     }
 
     public function test()
