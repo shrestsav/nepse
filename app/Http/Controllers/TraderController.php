@@ -18,8 +18,8 @@ class TraderController extends Controller
         
         foreach($stocks as $key => $stock){
             $priceHistory = $stock->priceHistory;
-
-            if(count($priceHistory) > 14){
+            
+            if(count($priceHistory) > 20){
                 $high = array_reverse($priceHistory->pluck('high')->toArray());
                 $low = array_reverse($priceHistory->pluck('low')->toArray());
                 $close = array_reverse($priceHistory->pluck('LTP')->toArray());
@@ -36,9 +36,12 @@ class TraderController extends Controller
                 $rsi_today = $reverse_rsi[0];
                 $rsi_yesterday = $reverse_rsi[1];
 
-                if($adx_today > $adx_yesterday && $adx_today > 23 && $rsi_today > $rsi_yesterday && $rsi_today > 50){
+                if($adx_today > $adx_yesterday && $adx_today > 23 && $rsi_today > $rsi_yesterday && $rsi_today > 50 && $stock->symbol!= "SHL" && $stock->symbol!= "OHL"){
                     $this->buyStocks[$stock->symbol] = [
-                        'stock' => $stock,
+                        'stock' => [
+                            'company_name' => $stock->company_name,
+                            'symbol' => $stock->symbol,
+                        ],
                         'reverse_RSI' => $reverse_rsi,
                         'reverse_ADX' => $reverse_adx,
                     ];

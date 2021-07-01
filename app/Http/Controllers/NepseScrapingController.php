@@ -17,6 +17,7 @@ class NepseScrapingController extends Controller
     private $results = [];
     private $stock = [];
     private $attributes = ['symbol', 'LTP', 'LTV', 'change_percent', 'high', 'low', 'open', 'quantity'];
+    private $dailyPriceAttributes = ['symbol', 'LTP', 'change_percent', 'high', 'low', 'open', 'quantity'];
 
     public function scrape()
     {
@@ -87,44 +88,6 @@ class NepseScrapingController extends Controller
         return $this->results;
     }
 
-    public function getPriceHistory(Request $request)
-    {
-        $symbols = $request->symbols;
-        
-        $priceHistories = [];
-
-        foreach($symbols as $symbol){
-            $company = Stock::where('symbol', $symbol);
-
-            if($company->exists()){
-                $company = $company->first();
-                $histories = $this->priceHistory($symbol);
-                $priceHistories[$symbol] = $histories;
-
-                foreach($histories as $history){
-                    $priceHistoryAlready = PriceHistory::where('stock_id',$company->id)->where('date', $history[1]);
-                    
-                    if(!$priceHistoryAlready->exists()){
-                        $priceHistory = PriceHistory::create([
-                            'stock_id'       => $company->id,
-                            'date'           => $history[1],
-                            'LTP'            => $history[2],
-                            'change'         => $history[3],
-                            'change_percent' => 0,
-                            'high'           => $history[4],
-                            'low'            => $history[5],
-                            'quantity'       => $history[8],
-                            'turnover'       => $history[9]
-                        ]);
-                    }
-                }
-            }
-            
-        }
-
-        return $priceHistories;
-    }
-
     public function initialize()
     {
         $path = storage_path(). "/app/scrape.json";
@@ -180,6 +143,44 @@ class NepseScrapingController extends Controller
         return response()->json($stocks);
     }
 
+    public function getPriceHistory(Request $request)
+    {
+        $symbols = $request->symbols;
+        
+        $priceHistories = [];
+
+        foreach($symbols as $symbol){
+            $company = Stock::where('symbol', $symbol);
+
+            if($company->exists()){
+                $company = $company->first();
+                $histories = $this->priceHistory($symbol);
+                $priceHistories[$symbol] = $histories;
+
+                foreach($histories as $history){
+                    $priceHistoryAlready = PriceHistory::where('stock_id',$company->id)->where('date', $history[1]);
+                    
+                    if(!$priceHistoryAlready->exists()){
+                        $priceHistory = PriceHistory::create([
+                            'stock_id'       => $company->id,
+                            'date'           => $history[1],
+                            'LTP'            => $history[2],
+                            'change'         => $history[3],
+                            'change_percent' => 0,
+                            'high'           => $history[4],
+                            'low'            => $history[5],
+                            'quantity'       => $history[8],
+                            'turnover'       => $history[9]
+                        ]);
+                    }
+                }
+            }
+            
+        }
+
+        return $priceHistories;
+    }
+
     public function createSyncLog(Request $request)
     {
         $operationType = $request->operation_type;
@@ -215,18 +216,59 @@ class NepseScrapingController extends Controller
 
     public function lastSyncLog()
     {
-        $log = SyncLog::orderBy('created_at','DESC')->first();
+        $log = SyncLog::orderBy('created_at','DESC')->whereNotNull('end')->first();
 
         return response()->json($log);
     }
 
-    public function test()
-    {
-        return Stock::where('symbol', 'ADBL')->with('priceHistory')->get();
-    }
-    
     public function getPriceForCurrentDay()
     {
         return 'here';
+    }
+    
+    public function dailyPrice()
+    {
+        $this->results = [];
+
+        $client = new Client();
+
+        $crawler = $client->request('GET', 'https://merolagani.com/LatestMarket.aspx');
+
+        $crawler->filterXPath('//table[@class="table table-hover live-trading sortable"]')
+            ->filter('tbody tr')
+            ->each(function ($tr, $i) { 
+                $tr->filter('td')->each(function ($td, $i) { 
+                    if($i < 7)
+                        $this->stock[$this->dailyPriceAttributes[$i]] = trim($td->text());
+                }); 
+                array_push($this->results, $this->stock); 
+            });
+
+        foreach($this->results as $result){
+            $company = Stock::where('symbol', $result['symbol']);
+
+            if($company->exists()){
+                $company = $company->first();
+                $date = date('Y-m-d');
+                $priceHistoryAlready = PriceHistory::where('stock_id', $company->id)->where('date', $date);
+                
+                if(!$priceHistoryAlready->exists()){
+                    $priceHistory = PriceHistory::create([
+                        'stock_id'       => $company->id,
+                        'date'           => $date,
+                        'LTP'            => str_replace(",", "", $result['LTP']),
+                        'change'         => 0,
+                        'change_percent' => $result['change_percent'],
+                        'high'           => str_replace(",", "", $result['high']),
+                        'low'            => str_replace(",", "", $result['low']),
+                        'quantity'       => str_replace(",", "", $result['quantity']),
+                        'turnover'       => 0
+                    ]);
+                }
+                
+            }
+        }
+
+        return 'done';
     }
 }

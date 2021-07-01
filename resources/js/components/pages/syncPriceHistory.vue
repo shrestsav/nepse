@@ -3,15 +3,21 @@
         <v-row class="d-flex">
             <v-col cols="12" sm="4">
                 <v-chip>
-                    <v-icon>mdi-clock</v-icon> &nbsp; Last Synced On:
+                    <v-icon>mdi-clock</v-icon>
+                    &nbsp; Last Synced On:
                     {{
                         Object.keys(lastSyncLog).length === 0
                             ? "Not Available"
-                            : $moment(lastSyncLog.created_at).format(
+                            : $moment(lastSyncLog.end).format(
                                   "YYYY-MM-DD HH:mm"
                               )
                     }}
                 </v-chip>
+                <!-- <v-chip v-if="Object.keys(lastSyncLog).length != 0">
+                    <v-icon>mdi-clock</v-icon>
+                    &nbsp; Type:
+                    {{ lastSyncLog.type_is }}
+                </v-chip> -->
                 <br />
                 <br />
                 <v-chip v-if="started">

@@ -1933,6 +1933,9 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
 var gradients = [["#222"], ["#42b3f4"], ["red", "orange", "yellow"], ["purple", "violet"], ["#00c6ff", "#F0F", "#FF0"], ["#f72047", "#ffd200", "#1feaea"]];
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
   components: {},
@@ -1948,22 +1951,6 @@ var gradients = [["#222"], ["#42b3f4"], ["red", "orange", "yellow"], ["purple", 
       fill: false,
       type: "trend",
       autoLineWidth: false,
-      messages: [{
-        from: "You",
-        message: "Sure, I'll see you later.",
-        time: "10:42am",
-        color: "deep-purple lighten-1"
-      }, {
-        from: "John Doe",
-        message: "Yeah, sure. Does 1:00pm work?",
-        time: "10:37am",
-        color: "green"
-      }, {
-        from: "You",
-        message: "Did you still want to grab lunch today?",
-        time: "9:47am",
-        color: "deep-purple lighten-1"
-      }],
       loaded: false,
       by_rsi_adx: {}
     };
@@ -2012,6 +1999,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -38131,11 +38124,7 @@ var render = function() {
       _vm._v(" "),
       _c("v-app-bar", { attrs: { app: "" } }),
       _vm._v(" "),
-      _c(
-        "v-main",
-        [_c("v-container", { attrs: { fluid: "" } }, [_c("router-view")], 1)],
-        1
-      ),
+      _c("v-main", [_c("v-container", [_c("router-view")], 1)], 1),
       _vm._v(" "),
       _c("v-footer", { attrs: { app: "" } })
     ],
@@ -38169,12 +38158,6 @@ var render = function() {
     "v-container",
     [
       _c(
-        "v-toolbar",
-        [_c("v-toolbar-title", [_vm._v("Buy Recommendation")])],
-        1
-      ),
-      _vm._v(" "),
-      _c(
         "v-overlay",
         { attrs: { value: !_vm.loaded } },
         [
@@ -38187,133 +38170,145 @@ var render = function() {
       _vm._v(" "),
       _c(
         "v-row",
-        { attrs: { justify: "space-around" } },
         _vm._l(_vm.by_rsi_adx, function(stock, symbol, i) {
           return _c(
-            "v-card",
-            { key: i, attrs: { width: "400" } },
+            "v-col",
+            { key: i, attrs: { cols: "12", md: "6" } },
             [
-              _c("v-sparkline", {
-                attrs: {
-                  value: stock.RSI,
-                  gradient: _vm.gradient,
-                  smooth: _vm.radius || false,
-                  padding: _vm.padding,
-                  "line-width": _vm.width,
-                  "stroke-linecap": _vm.lineCap,
-                  "gradient-direction": _vm.gradientDirection,
-                  fill: _vm.fill,
-                  type: _vm.type,
-                  "auto-line-width": _vm.autoLineWidth,
-                  "auto-draw": ""
-                }
-              }),
-              _vm._v(" "),
-              _c("v-sparkline", {
-                attrs: {
-                  value: stock.ADX,
-                  gradient: _vm.gradient,
-                  smooth: _vm.radius || false,
-                  padding: _vm.padding,
-                  "line-width": _vm.width,
-                  "stroke-linecap": _vm.lineCap,
-                  "gradient-direction": _vm.gradientDirection,
-                  fill: _vm.fill,
-                  type: _vm.type,
-                  "auto-line-width": _vm.autoLineWidth,
-                  "auto-draw": ""
-                }
-              }),
-              _vm._v(" "),
-              _c("v-card-title", [
-                _vm._v("\n                " + _vm._s(symbol) + "\n            ")
-              ]),
-              _vm._v(" "),
-              _c("v-card-subtitle", [
-                _vm._v(
-                  "\n                " +
-                    _vm._s(stock.stock.company_name) +
-                    "\n            "
-                )
-              ]),
-              _vm._v(" "),
               _c(
-                "v-card-text",
+                "v-card",
+                { attrs: { width: "400" } },
                 [
-                  _c("div", { staticClass: "font-weight-bold ml-8 mb-2" }, [
-                    _vm._v("\n                    Today\n                ")
+                  _c("v-sparkline", {
+                    attrs: {
+                      value: stock.RSI,
+                      gradient: _vm.gradient,
+                      smooth: _vm.radius || false,
+                      padding: _vm.padding,
+                      "line-width": _vm.width,
+                      "stroke-linecap": _vm.lineCap,
+                      "gradient-direction": _vm.gradientDirection,
+                      fill: _vm.fill,
+                      type: _vm.type,
+                      "auto-line-width": _vm.autoLineWidth,
+                      "auto-draw": ""
+                    }
+                  }),
+                  _vm._v(" "),
+                  _c("v-sparkline", {
+                    attrs: {
+                      value: stock.ADX,
+                      gradient: _vm.gradient,
+                      smooth: _vm.radius || false,
+                      padding: _vm.padding,
+                      "line-width": _vm.width,
+                      "stroke-linecap": _vm.lineCap,
+                      "gradient-direction": _vm.gradientDirection,
+                      fill: _vm.fill,
+                      type: _vm.type,
+                      "auto-line-width": _vm.autoLineWidth,
+                      "auto-draw": ""
+                    }
+                  }),
+                  _vm._v(" "),
+                  _c("v-card-title", [
+                    _vm._v(
+                      "\n                    " +
+                        _vm._s(symbol) +
+                        "\n                "
+                    )
+                  ]),
+                  _vm._v(" "),
+                  _c("v-card-subtitle", [
+                    _vm._v(
+                      "\n                    " +
+                        _vm._s(stock.stock.company_name) +
+                        "\n                "
+                    )
                   ]),
                   _vm._v(" "),
                   _c(
-                    "v-timeline",
-                    { attrs: { "align-top": "", dense: "" } },
+                    "v-card-text",
                     [
-                      _c(
-                        "v-timeline-item",
-                        { attrs: { color: "green", small: "" } },
-                        [
-                          _c("div", [
-                            _c(
-                              "div",
-                              { staticClass: "font-weight-normal" },
-                              [
-                                _c("strong", [_vm._v("RSI:  ")]),
-                                _vm._v(
-                                  "\n                                " +
-                                    _vm._s(stock.reverse_RSI[2]) +
-                                    "\n                                "
-                                ),
-                                _c("v-icon", [_vm._v("mdi-forward")]),
-                                _vm._v(
-                                  "\n                                " +
-                                    _vm._s(stock.reverse_RSI[1]) +
-                                    "\n                                "
-                                ),
-                                _c("v-icon", [_vm._v("mdi-forward")]),
-                                _vm._v(
-                                  "\n                                " +
-                                    _vm._s(stock.reverse_RSI[0]) +
-                                    "\n                            "
-                                )
-                              ],
-                              1
-                            )
-                          ])
-                        ]
-                      ),
+                      _c("div", { staticClass: "font-weight-bold ml-8 mb-2" }, [
+                        _vm._v(
+                          "\n                        Today\n                    "
+                        )
+                      ]),
                       _vm._v(" "),
                       _c(
-                        "v-timeline-item",
-                        { attrs: { color: "green", small: "" } },
+                        "v-timeline",
+                        { attrs: { "align-top": "", dense: "" } },
                         [
-                          _c("div", [
-                            _c(
-                              "div",
-                              { staticClass: "font-weight-normal" },
-                              [
-                                _c("strong", [_vm._v("ADX:  ")]),
-                                _vm._v(
-                                  "\n                                " +
-                                    _vm._s(stock.reverse_ADX[2]) +
-                                    "\n                                "
-                                ),
-                                _c("v-icon", [_vm._v("mdi-forward")]),
-                                _vm._v(
-                                  "\n                                " +
-                                    _vm._s(stock.reverse_ADX[1]) +
-                                    "\n                                "
-                                ),
-                                _c("v-icon", [_vm._v("mdi-forward")]),
-                                _vm._v(
-                                  "\n                                " +
-                                    _vm._s(stock.reverse_ADX[0]) +
-                                    "\n                            "
+                          _c(
+                            "v-timeline-item",
+                            { attrs: { color: "green", small: "" } },
+                            [
+                              _c("div", [
+                                _c(
+                                  "div",
+                                  { staticClass: "font-weight-normal" },
+                                  [
+                                    _c("strong", [_vm._v("RSI:  ")]),
+                                    _vm._v(
+                                      "\n                                    " +
+                                        _vm._s(stock.reverse_RSI[2]) +
+                                        "\n                                    "
+                                    ),
+                                    _c("v-icon", [_vm._v("mdi-forward")]),
+                                    _vm._v(
+                                      "\n                                    " +
+                                        _vm._s(stock.reverse_RSI[1]) +
+                                        "\n                                    "
+                                    ),
+                                    _c("v-icon", [_vm._v("mdi-forward")]),
+                                    _vm._v(
+                                      "\n                                    " +
+                                        _vm._s(stock.reverse_RSI[0]) +
+                                        "\n                                "
+                                    )
+                                  ],
+                                  1
                                 )
-                              ],
-                              1
-                            )
-                          ])
-                        ]
+                              ])
+                            ]
+                          ),
+                          _vm._v(" "),
+                          _c(
+                            "v-timeline-item",
+                            { attrs: { color: "green", small: "" } },
+                            [
+                              _c("div", [
+                                _c(
+                                  "div",
+                                  { staticClass: "font-weight-normal" },
+                                  [
+                                    _c("strong", [_vm._v("ADX:  ")]),
+                                    _vm._v(
+                                      "\n                                    " +
+                                        _vm._s(stock.reverse_ADX[2]) +
+                                        "\n                                    "
+                                    ),
+                                    _c("v-icon", [_vm._v("mdi-forward")]),
+                                    _vm._v(
+                                      "\n                                    " +
+                                        _vm._s(stock.reverse_ADX[1]) +
+                                        "\n                                    "
+                                    ),
+                                    _c("v-icon", [_vm._v("mdi-forward")]),
+                                    _vm._v(
+                                      "\n                                    " +
+                                        _vm._s(stock.reverse_ADX[0]) +
+                                        "\n                                "
+                                    )
+                                  ],
+                                  1
+                                )
+                              ])
+                            ]
+                          )
+                        ],
+                        1
                       )
                     ],
                     1
@@ -38370,12 +38365,12 @@ var render = function() {
                 [
                   _c("v-icon", [_vm._v("mdi-clock")]),
                   _vm._v(
-                    "   Last Synced On:\n                " +
+                    "\n                  Last Synced On:\n                " +
                       _vm._s(
                         Object.keys(_vm.lastSyncLog).length === 0
                           ? "Not Available"
                           : _vm
-                              .$moment(_vm.lastSyncLog.created_at)
+                              .$moment(_vm.lastSyncLog.end)
                               .format("YYYY-MM-DD HH:mm")
                       ) +
                       "\n            "
