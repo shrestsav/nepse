@@ -19,6 +19,7 @@ class NepseScrapingController extends Controller
     private $attributes = ['symbol', 'LTP', 'LTV', 'change_percent', 'high', 'low', 'open', 'quantity'];
     private $dailyPriceAttributes = ['symbol', 'LTP', 'change_percent', 'high', 'low', 'open', 'quantity'];
 
+    //Scrape All Stocks from merolagani.com
     public function scrape()
     {
         $client = new Client();
@@ -64,35 +65,12 @@ class NepseScrapingController extends Controller
         return $this->results;
     }
 
-    public function priceHistory($symbol)
-    {
-        $client = new Client();
-
-        $this->results = [];
-        
-        $crawler = $client->request('GET', 'https://nepalstockinfo.com/companyhistory/' . $symbol);
-
-        $crawler->filterXPath('//table[@class="table table-bordered stripe row-border order-column example_datatable_fixedcolumn"]')
-            ->each(function ($node, $i) {
-                if($i == 0){
-                    $node->filter('tbody tr')
-                        ->each(function ($tr, $i) { 
-                            $tr->filter('td')->each(function ($td, $i) { 
-                                $this->stock[$i] = $td->text();
-                            }); 
-                            array_push($this->results, $this->stock); 
-                        });
-                }
-            });
-
-        return $this->results;
-    }
-
+    // Initialize Stocks data from scrape.json from merolagani.com
     public function initialize()
     {
         $path = storage_path(). "/app/scrape.json";
         $stocks = json_decode(file_get_contents($path), true); 
-        
+
         foreach($stocks as $stock){
             //Store Sector
             $checkSector = Sector::where('name', $stock['sector']);
@@ -136,11 +114,28 @@ class NepseScrapingController extends Controller
         return 'done';
     }
 
-    public function getAllStocks()
+    public function priceHistory($symbol)
     {
-        $stocks = Stock::all();
+        $client = new Client();
 
-        return response()->json($stocks);
+        $this->results = [];
+        
+        $crawler = $client->request('GET', 'https://nepalstockinfo.com/companyhistory/' . $symbol);
+
+        $crawler->filterXPath('//table[@class="table table-bordered stripe row-border order-column example_datatable_fixedcolumn"]')
+            ->each(function ($node, $i) {
+                if($i == 0){
+                    $node->filter('tbody tr')
+                        ->each(function ($tr, $i) { 
+                            $tr->filter('td')->each(function ($td, $i) { 
+                                $this->stock[$i] = $td->text();
+                            }); 
+                            array_push($this->results, $this->stock); 
+                        });
+                }
+            });
+
+        return $this->results;
     }
 
     public function getPriceHistory(Request $request)
@@ -169,8 +164,8 @@ class NepseScrapingController extends Controller
                             'change_percent' => 0,
                             'high'           => $history[4],
                             'low'            => $history[5],
-                            'quantity'       => $history[8],
-                            'turnover'       => $history[9]
+                            'traded_shares'  => $history[8],
+                            'traded_amount'  => $history[9]
                         ]);
                     }
                 }
@@ -181,94 +176,8 @@ class NepseScrapingController extends Controller
         return $priceHistories;
     }
 
-    public function createSyncLog(Request $request)
-    {
-        $operationType = $request->operation_type;
-        $type = $request->type;
-
-        if($operationType == 'create'){
-            $sync = SyncLog::create([
-                'type'  => $type,
-                'start' => date('Y-m-d H:i:s')
-            ]);
-
-            return response()->json($sync);
-
-        } elseif($operationType == 'update') {
-            $syncID = $request->id;
-            $totalSynced = $request->total_synced;
-            $totalTime = $request->total_time;
-
-            $sync = SyncLog::where('id', $syncID)->where('type', $type)->update([
-                'end'  => date('Y-m-d H:i:s'),
-                'total_time' => $totalTime,
-                'total_synced' => $totalSynced
-            ]);
-
-            return response()->json($sync);
-        }
-
-        return response()->json([
-            'message' => 'Operation Type is Required'
-        ], 403);
-
-    }
-
-    public function lastSyncLog()
-    {
-        $log = SyncLog::orderBy('created_at','DESC')->whereNotNull('end')->first();
-
-        return response()->json($log);
-    }
-
     public function getPriceForCurrentDay()
     {
-        return 'here';
-    }
-    
-    public function dailyPrice()
-    {
-        $this->results = [];
-
-        $client = new Client();
-
-        $crawler = $client->request('GET', 'https://merolagani.com/LatestMarket.aspx');
-
-        $crawler->filterXPath('//table[@class="table table-hover live-trading sortable"]')
-            ->filter('tbody tr')
-            ->each(function ($tr, $i) { 
-                $tr->filter('td')->each(function ($td, $i) { 
-                    if($i < 7)
-                        $this->stock[$this->dailyPriceAttributes[$i]] = trim($td->text());
-                }); 
-                array_push($this->results, $this->stock); 
-            });
-
-        foreach($this->results as $result){
-            $company = Stock::where('symbol', $result['symbol']);
-
-            if($company->exists()){
-                $company = $company->first();
-                $date = date('Y-m-d');
-                $priceHistoryAlready = PriceHistory::where('stock_id', $company->id)->where('date', $date);
-                
-                if(!$priceHistoryAlready->exists()){
-                    $priceHistory = PriceHistory::create([
-                        'stock_id'       => $company->id,
-                        'date'           => $date,
-                        'LTP'            => str_replace(",", "", $result['LTP']),
-                        'change'         => 0,
-                        'change_percent' => $result['change_percent'],
-                        'high'           => str_replace(",", "", $result['high']),
-                        'low'            => str_replace(",", "", $result['low']),
-                        'quantity'       => str_replace(",", "", $result['quantity']),
-                        'turnover'       => 0
-                    ]);
-                }
-                
-            }
-        }
-
-        return 'done';
+        return Stock::where('symbol','CLBSL')->with('priceHistory')->get();
     }
 }

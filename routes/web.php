@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function(){
-    return 'here';
+Route::get('/', function () {
+    return phpinfo();
 });
 Route::get('/dashboard', [App\Http\Controllers\HomeController::class, 'index'])->name('dashboard');
 Route::get('/dashboard/{any}', [App\Http\Controllers\HomeController::class, 'index'])->where('any', '.*');
@@ -22,11 +22,11 @@ Route::get('/dashboard/{any}', [App\Http\Controllers\HomeController::class, 'ind
 Route::get('/scrape', [App\Http\Controllers\NepseScrapingController::class, 'scrape']);
 Route::post('/pricehistory', [App\Http\Controllers\NepseScrapingController::class, 'getPriceHistory']);
 Route::get('/initialize', [App\Http\Controllers\NepseScrapingController::class, 'initialize']);
-Route::get('/getAllStocks', [App\Http\Controllers\NepseScrapingController::class, 'getAllStocks']);
 Route::get('/pricehistoryone/{name}', [App\Http\Controllers\NepseScrapingController::class, 'priceHistory']);
 Route::get('/getPriceForCurrentDay', [App\Http\Controllers\NepseScrapingController::class, 'getPriceForCurrentDay']);
-Route::get('/getLastSyncLog', [App\Http\Controllers\NepseScrapingController::class, 'lastSyncLog']);
-Route::post('/createSyncLog', [App\Http\Controllers\NepseScrapingController::class, 'createSyncLog']);
-Route::get('/dailyPrice', [App\Http\Controllers\NepseScrapingController::class, 'dailyPrice']);
 
-Route::get('/trader', [App\Http\Controllers\TraderController::class, 'calculate']);
+Route::get('/dailyPrice', [App\Http\Controllers\MeroLaganiController::class, 'dailyPrice']);
+
+Route::get('/trader', [App\Http\Controllers\TraderController::class, 'getRecommendationsByMaEmaAdx']);
+
+Route::get('/testho', [App\Http\Controllers\NepaliPaisaApiController::class, 'testho']);

@@ -9,15 +9,30 @@ class PriceHistory extends Model
 {
     use HasFactory;
 
+    protected $appends = ['hlc3'];
+
     protected $fillable = [
         'stock_id',
         'date',
-        'LTP',
+        'closing_price',
+        'max_price',
+        'min_price',
         'change',
         'change_percent',
-        'high',
-        'low',
-        'quantity',
-        'turnover'
+        'previous_closing',
+        'traded_shares',
+        'traded_amount',
+        'total_quantity',
+        'total_transaction',
+        'total_amount',
+        'no_of_transactions'
     ];
+
+    /**
+     * Get the average of high, low, and closing price
+     */
+    public function getHlc3Attribute()
+    {
+        return ($this->max_price + $this->min_price + $this->closing_price)/3;
+    }
 }

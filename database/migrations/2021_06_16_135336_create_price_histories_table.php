@@ -17,13 +17,18 @@ class CreatePriceHistoriesTable extends Migration
             $table->id();
             $table->unsignedBigInteger('stock_id');
             $table->date('date');
-            $table->decimal('LTP', 10, 2);
+            $table->decimal('closing_price', 10, 2);
+            $table->decimal('max_price', 10, 2);
+            $table->decimal('min_price', 10, 2);
             $table->decimal('change', 10, 2);
             $table->decimal('change_percent', 10, 2);
-            $table->decimal('high', 10, 2);
-            $table->decimal('low', 10, 2);
-            $table->bigInteger('quantity');
-            $table->bigInteger('turnover');
+            $table->decimal('previous_closing', 10, 2);
+            $table->bigInteger('traded_shares');
+            $table->bigInteger('traded_amount');
+            $table->bigInteger('total_quantity');
+            $table->bigInteger('total_transaction');
+            $table->decimal('total_amount', 16, 2);
+            $table->integer('no_of_transactions');
             $table->timestamps();
 
             $table->foreign('stock_id')->references('id')->on('stocks')->onUpdate('cascade')->onDelete('cascade');
