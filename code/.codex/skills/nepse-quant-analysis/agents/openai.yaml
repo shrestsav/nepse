@@ -1,0 +1,4 @@
+interface:
+  display_name: "NEPSE Quant Analysis"
+  short_description: "Work on signals, backtests, and history"
+  default_prompt: "Use $nepse-quant-analysis to inspect or modify recommendation and backtesting logic in this project."

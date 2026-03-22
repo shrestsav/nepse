@@ -1,0 +1,4 @@
+interface:
+  display_name: "NEPSE Sync Ops"
+  short_description: "Run and debug NEPSE sync workflows"
+  default_prompt: "Use $nepse-sync-ops to investigate a sync, queue, or scheduler issue in this project."

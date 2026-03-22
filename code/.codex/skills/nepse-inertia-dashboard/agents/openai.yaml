@@ -1,0 +1,4 @@
+interface:
+  display_name: "NEPSE Inertia Dashboard"
+  short_description: "Maintain Laravel Inertia dashboard flows"
+  default_prompt: "Use $nepse-inertia-dashboard to change a dashboard route, controller, or Inertia page in this project."
