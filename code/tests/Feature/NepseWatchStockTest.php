@@ -113,15 +113,17 @@ test('single stock live sync upserts todays row and returns quote data', functio
             'volume' => 12345,
         ]);
 
-    $this->assertDatabaseHas('price_histories', [
-        'stock_id' => $stock->id,
-        'date' => now()->toDateString(),
-        'closing_price' => 810.25,
-        'previous_closing' => 800.00,
-        'change' => 10.25,
-        'change_percent' => 1.28,
-        'traded_shares' => 12345,
-    ]);
+    expect(
+        PriceHistory::query()
+            ->where('stock_id', $stock->id)
+            ->whereDate('date', now()->toDateString())
+            ->where('closing_price', 810.25)
+            ->where('previous_closing', 800.00)
+            ->where('change', 10.25)
+            ->where('change_percent', 1.28)
+            ->where('traded_shares', 12345)
+            ->exists(),
+    )->toBeTrue();
 });
 
 function watchStockMarketHtml(): string
