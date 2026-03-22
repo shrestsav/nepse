@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
+    Activity,
+    Building2,
     ChartCandlestick,
     LayoutGrid,
     RefreshCcw,
@@ -33,6 +35,16 @@ const mainNavItems: NavItem[] = [
         title: 'Recommendations',
         href: dashboardRoutes.recommendations(),
         icon: TrendingUp,
+    },
+    {
+        title: 'Watch stock',
+        href: dashboardRoutes.watchStock(),
+        icon: Activity,
+    },
+    {
+        title: 'Sectors',
+        href: '/dashboard/sectors',
+        icon: Building2,
     },
     {
         title: 'Backtesting',

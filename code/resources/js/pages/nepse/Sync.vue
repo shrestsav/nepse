@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { AlertCircle, CheckCircle2, RefreshCcw } from 'lucide-vue-next';
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { onBeforeUnmount, watch } from 'vue';
 import SyncLogPanel from '@/components/nepse/SyncLogPanel.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,12 +16,11 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import dashboardRoutes from '@/routes/dashboard';
 import syncRoutes from '@/routes/dashboard/sync';
-import type { BreadcrumbItem, SyncLogSummary, SyncModeOption } from '@/types';
+import type { BreadcrumbItem, SyncLogSummary } from '@/types';
 
 const props = defineProps<{
     currentSync: SyncLogSummary | null;
     latestSync: SyncLogSummary | null;
-    modes: SyncModeOption[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -35,11 +34,6 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const selectedMode = ref(
-    props.modes.find((mode) => mode.value === 'smart')?.value
-        ?? props.modes[0]?.value
-        ?? 'smart',
-);
 const page = usePage();
 
 let pollingTimer: number | null = null;
@@ -66,7 +60,7 @@ function stopPolling() {
 function submit() {
     router.post(
         syncRoutes.store.url(),
-        { mode: selectedMode.value },
+        { mode: 'live' },
         {
             preserveScroll: true,
         },
@@ -109,37 +103,19 @@ onBeforeUnmount(() => stopPolling());
 
             <Card class="border-border/60">
                 <CardHeader class="space-y-1">
-                    <CardTitle>Start a NEPSE sync</CardTitle>
+                    <CardTitle>Start a live NEPSE sync</CardTitle>
                     <CardDescription>
-                        Use the dashboard for smart or live refreshes. Full historical backfills are terminal-only.
+                        Use the dashboard for live market refreshes only. Smart and full syncs are terminal-only.
                     </CardDescription>
                 </CardHeader>
                 <CardContent class="space-y-4">
-                    <div class="grid gap-4 lg:grid-cols-2">
-                        <label
-                            v-for="mode in props.modes"
-                            :key="mode.value"
-                            class="cursor-pointer rounded-xl border p-4 transition-colors"
-                            :class="selectedMode === mode.value ? 'border-primary bg-primary/5' : 'border-border/60'"
-                        >
-                            <input
-                                v-model="selectedMode"
-                                type="radio"
-                                name="mode"
-                                :value="mode.value"
-                                class="sr-only"
-                            />
-                            <div class="space-y-2">
-                                <p class="font-medium">{{ mode.label }}</p>
-                                <p class="text-sm text-muted-foreground">
-                                    {{
-                                        mode.value === 'live'
-                                            ? 'Only refresh current-day prices for already tracked stocks.'
-                                            : 'Refresh the catalog and fetch only missing historical rows.'
-                                    }}
-                                </p>
-                            </div>
-                        </label>
+                    <div class="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                        <div class="space-y-2">
+                            <p class="font-medium">Live</p>
+                            <p class="text-sm text-muted-foreground">
+                                Only refresh current-day prices for already tracked stocks.
+                            </p>
+                        </div>
                     </div>
 
                     <div class="flex items-center gap-3">
@@ -148,7 +124,7 @@ onBeforeUnmount(() => stopPolling());
                             @click="submit"
                         >
                             <RefreshCcw class="size-4" />
-                            Start {{ selectedMode }} sync
+                            Start live sync
                         </Button>
                         <p class="text-sm text-muted-foreground">
                             {{ props.currentSync?.isRunning ? 'Wait for the active sync to finish before starting another.' : 'Queue work onto the database-backed Laravel queue.' }}

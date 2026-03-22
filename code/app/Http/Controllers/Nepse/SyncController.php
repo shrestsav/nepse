@@ -29,10 +29,6 @@ class SyncController extends Controller
                     ->latest('created_at')
                     ->first(),
             ),
-            'modes' => collect(SyncMode::dashboardModes())->map(fn (SyncMode $mode): array => [
-                'value' => $mode->value,
-                'label' => $mode->label(),
-            ])->all(),
         ]);
     }
 

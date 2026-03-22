@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -224,15 +225,51 @@ test('sync command aborts early when the upstream daily endpoint returns 404', f
         ->and($syncLog?->error_summary)->toContain('NepaliPaisa daily price endpoint returned 404');
 });
 
-test('sync command is blocked while another sync is active', function () {
+test('stale sync log rows do not block the sync command', function () {
+    Carbon::setTestNow('2026-03-22 12:00:00');
+
     SyncLog::factory()->create([
         'type' => SyncMode::Full,
         'status' => SyncStatus::Running,
     ]);
 
-    $this->artisan('nepse:sync')->assertExitCode(1);
+    Http::fake(function (HttpRequest $request) {
+        if ($request->url() === config('nepse.merolagani.market_url')) {
+            return Http::response(commandMarketHtml(), 200);
+        }
 
-    expect(SyncLog::query()->count())->toBe(1);
+        if ($request->url() === 'https://merolagani.com/CompanyDetail.aspx?symbol=AAA') {
+            return Http::response(commandDetailHtml('Alpha Bank', 'Commercial Bank'), 200);
+        }
+
+        if (str_starts_with($request->url(), config('nepse.nepalipaisa.daily_price_url'))) {
+            parse_str(parse_url($request->url(), PHP_URL_QUERY) ?? '', $query);
+
+            return Http::response(dailyPriceResponse('AAA', (string) ($query['tradeDate'] ?? '2026-03-22')), 200);
+        }
+
+        return Http::response([], 500);
+    });
+
+    $this->artisan('nepse:sync', [
+        'mode' => 'daily',
+        '--symbol' => ['AAA'],
+        '--days' => 1,
+    ])->assertExitCode(0);
+
+    expect(SyncLog::query()->count())->toBe(2)
+        ->and(SyncLog::query()->latest('id')->first()?->status)->toBe(SyncStatus::Completed);
+});
+
+test('sync command is blocked while another cli sync lock is active', function () {
+    $lock = Cache::lock('nepse:sync:command', 7200);
+    $lock->get();
+
+    try {
+        $this->artisan('nepse:sync')->assertExitCode(1);
+    } finally {
+        $lock->release();
+    }
 });
 
 test('daily sync command is scheduled', function () {

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { Search, X } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -9,15 +11,23 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import dashboardRoutes from '@/routes/dashboard';
-import type { BreadcrumbItem, Paginated, StockIndexItem } from '@/types';
+import type { BreadcrumbItem, SectorOption, StockIndexItem } from '@/types';
 
 const props = defineProps<{
-    stocks: Paginated<StockIndexItem>;
+    stocks: StockIndexItem[];
+    sectors: SectorOption[];
     filters: {
-        page: number;
+        search: string | null;
+        sector: number | null;
+    };
+    summary: {
+        totalStocks: number;
+        filteredStocks: number;
     };
 }>();
 
@@ -32,10 +42,21 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const search = ref(props.filters.search ?? '');
+const selectedSector = ref(props.filters.sector !== null ? String(props.filters.sector) : 'all');
+
 const kathmanduDateTimeFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Kathmandu',
+});
+
+const activeSector = computed(() => {
+    if (selectedSector.value === 'all') {
+        return null;
+    }
+
+    return props.sectors.find((sector) => String(sector.id) === selectedSector.value) ?? null;
 });
 
 function formatLatestDate(stock: StockIndexItem): string {
@@ -49,6 +70,34 @@ function formatLatestSyncedAt(value: string | null): string {
 
     return kathmanduDateTimeFormatter.format(new Date(value));
 }
+
+function applyFilters() {
+    router.get(
+        dashboardRoutes.stocks().url,
+        {
+            search: search.value.trim() || undefined,
+            sector: selectedSector.value === 'all' ? undefined : Number(selectedSector.value),
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+        },
+    );
+}
+
+function clearFilters() {
+    search.value = '';
+    selectedSector.value = 'all';
+
+    router.get(
+        dashboardRoutes.stocks().url,
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+        },
+    );
+}
 </script>
 
 <template>
@@ -61,19 +110,86 @@ function formatLatestSyncedAt(value: string | null): string {
                     Stock coverage
                 </h1>
                 <p class="text-sm text-muted-foreground">
-                    Catalog and history coverage for the migrated NEPSE dataset.
+                    Browse every tracked symbol, then narrow the list by sector or company search.
                 </p>
             </div>
 
             <Card class="border-border/60">
-                <CardHeader class="space-y-1">
-                    <CardTitle>Tracked symbols</CardTitle>
-                    <CardDescription>
-                        Page {{ props.stocks.current_page }} of {{ props.stocks.last_page }}.
-                    </CardDescription>
+                <CardHeader class="space-y-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="space-y-1">
+                            <CardTitle>Tracked symbols</CardTitle>
+                            <CardDescription>
+                                Showing {{ props.summary.filteredStocks }} of {{ props.summary.totalStocks }} symbols.
+                            </CardDescription>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <Badge v-if="props.filters.search" variant="secondary">
+                                Search: {{ props.filters.search }}
+                            </Badge>
+                            <Badge v-if="activeSector" variant="secondary">
+                                Sector: {{ activeSector.name }}
+                            </Badge>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_auto]">
+                        <div class="space-y-2">
+                            <Label for="stock-search">Search symbols or companies</Label>
+                            <div class="relative">
+                                <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    id="stock-search"
+                                    v-model="search"
+                                    type="search"
+                                    placeholder="NABIL, hydropower, bank..."
+                                    class="pl-9"
+                                    @keydown.enter.prevent="applyFilters"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label for="sector-filter">Filter by sector</Label>
+                            <select
+                                id="sector-filter"
+                                v-model="selectedSector"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                                <option value="all">
+                                    All sectors
+                                </option>
+                                <option
+                                    v-for="sector in props.sectors"
+                                    :key="sector.id"
+                                    :value="String(sector.id)"
+                                >
+                                    {{ sector.name }} ({{ sector.stockCount }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-end gap-2">
+                            <Button @click="applyFilters">
+                                Apply filters
+                            </Button>
+                            <Button variant="outline" @click="clearFilters">
+                                <X class="size-4" />
+                                Clear
+                            </Button>
+                        </div>
+                    </div>
                 </CardHeader>
+
                 <CardContent class="space-y-4">
-                    <div class="hidden overflow-x-auto lg:block">
+                    <div
+                        v-if="props.stocks.length === 0"
+                        class="rounded-xl border border-dashed border-border/60 px-4 py-10 text-center text-sm text-muted-foreground"
+                    >
+                        No stocks match the current filters.
+                    </div>
+
+                    <div v-else class="hidden overflow-x-auto lg:block">
                         <table class="min-w-full divide-y divide-border text-sm">
                             <thead>
                                 <tr class="text-left text-muted-foreground">
@@ -86,10 +202,10 @@ function formatLatestSyncedAt(value: string | null): string {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border/60">
-                                <tr v-for="stock in props.stocks.data" :key="stock.id">
+                                <tr v-for="stock in props.stocks" :key="stock.id">
                                     <td class="py-3 pr-4 font-medium">
                                         <Link
-                                            :href="`/dashboard/stocks/${stock.id}`"
+                                            :href="dashboardRoutes.stocks.show(stock.id).url"
                                             class="text-primary transition hover:text-primary/80 hover:underline"
                                         >
                                             {{ stock.symbol }}
@@ -109,7 +225,9 @@ function formatLatestSyncedAt(value: string | null): string {
                                             </p>
                                         </div>
                                     </td>
-                                    <td class="py-3">{{ stock.latestClose !== null ? Number(stock.latestClose).toFixed(2) : 'N/A' }}</td>
+                                    <td class="py-3">
+                                        {{ stock.latestClose !== null ? Number(stock.latestClose).toFixed(2) : 'N/A' }}
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -117,7 +235,7 @@ function formatLatestSyncedAt(value: string | null): string {
 
                     <div class="grid gap-4 lg:hidden">
                         <Card
-                            v-for="stock in props.stocks.data"
+                            v-for="stock in props.stocks"
                             :key="stock.id"
                             class="border-border/60"
                         >
@@ -125,7 +243,7 @@ function formatLatestSyncedAt(value: string | null): string {
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="space-y-1">
                                         <Link
-                                            :href="`/dashboard/stocks/${stock.id}`"
+                                            :href="dashboardRoutes.stocks.show(stock.id).url"
                                             class="font-semibold text-primary transition hover:text-primary/80 hover:underline"
                                         >
                                             {{ stock.symbol }}
@@ -138,6 +256,7 @@ function formatLatestSyncedAt(value: string | null): string {
                                         {{ stock.sector ?? 'Unknown' }}
                                     </Badge>
                                 </div>
+
                                 <div class="grid gap-3 text-sm sm:grid-cols-3">
                                     <div>
                                         <p class="text-muted-foreground">History rows</p>
@@ -160,53 +279,16 @@ function formatLatestSyncedAt(value: string | null): string {
                                         </p>
                                     </div>
                                 </div>
+
                                 <div>
                                     <Button variant="outline" size="sm" as-child>
-                                        <Link :href="`/dashboard/stocks/${stock.id}`">
+                                        <Link :href="dashboardRoutes.stocks.show(stock.id).url">
                                             View price history
                                         </Link>
                                     </Button>
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
-
-                    <div class="flex items-center justify-between gap-3">
-                        <Button
-                            v-if="props.stocks.prev_page_url"
-                            variant="outline"
-                            as-child
-                        >
-                            <Link
-                                :href="dashboardRoutes.stocks({ query: { page: props.stocks.current_page - 1 } })"
-                                preserve-scroll
-                            >
-                                Previous
-                            </Link>
-                        </Button>
-                        <Button v-else variant="outline" disabled>
-                            Previous
-                        </Button>
-
-                        <p class="text-sm text-muted-foreground">
-                            Showing {{ props.stocks.data.length }} of {{ props.stocks.total }} symbols
-                        </p>
-
-                        <Button
-                            v-if="props.stocks.next_page_url"
-                            variant="outline"
-                            as-child
-                        >
-                            <Link
-                                :href="dashboardRoutes.stocks({ query: { page: props.stocks.current_page + 1 } })"
-                                preserve-scroll
-                            >
-                                Next
-                            </Link>
-                        </Button>
-                        <Button v-else variant="outline" disabled>
-                            Next
-                        </Button>
                     </div>
                 </CardContent>
             </Card>

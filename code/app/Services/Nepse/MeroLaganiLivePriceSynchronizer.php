@@ -4,6 +4,7 @@ namespace App\Services\Nepse;
 
 use App\Models\PriceHistory;
 use App\Models\Stock;
+use RuntimeException;
 
 class MeroLaganiLivePriceSynchronizer
 {
@@ -37,37 +38,92 @@ class MeroLaganiLivePriceSynchronizer
                 continue;
             }
 
-            $closingPrice = $this->toFloat($row['ltp']);
-            $previousClosing = (float) ($stock->priceHistories()
-                ->whereDate('date', '<', $today)
-                ->orderByDesc('date')
-                ->value('closing_price') ?? $closingPrice);
-
-            PriceHistory::query()->updateOrCreate(
-                [
-                    'stock_id' => $stock->id,
-                    'date' => $today,
-                ],
-                [
-                    'closing_price' => $closingPrice,
-                    'max_price' => $this->toFloat($row['high'], $closingPrice),
-                    'min_price' => $this->toFloat($row['low'], $closingPrice),
-                    'change' => round($closingPrice - $previousClosing, 2),
-                    'change_percent' => $this->toFloat($row['change_percent']),
-                    'previous_closing' => $previousClosing,
-                    'traded_shares' => $this->toInt($row['quantity']),
-                    'traded_amount' => 0,
-                    'total_quantity' => 0,
-                    'total_transaction' => 0,
-                    'total_amount' => 0,
-                    'no_of_transactions' => 0,
-                ],
-            );
+            $this->persistRow($stock, $row);
 
             $updated++;
         }
 
         return $updated;
+    }
+
+    /**
+     * @return array{
+     *     stockId: int,
+     *     symbol: string,
+     *     companyName: string,
+     *     sector: string|null,
+     *     marketDate: string,
+     *     recordedAt: string,
+     *     latestSyncedAt: string,
+     *     price: float,
+     *     change: float,
+     *     changePercent: float,
+     *     previousClose: float,
+     *     high: float,
+     *     low: float,
+     *     open: float,
+     *     volume: int
+     * }
+     */
+    public function syncStock(Stock $stock): array
+    {
+        $row = collect($this->marketClient->fetchMarketRows())
+            ->first(fn (array $marketRow): bool => ($marketRow['symbol'] ?? null) === $stock->symbol);
+
+        if (! is_array($row)) {
+            throw new RuntimeException("Stock symbol [{$stock->symbol}] was not present in the latest market snapshot.");
+        }
+
+        $priceHistory = $this->persistRow($stock, $row);
+
+        return [
+            'stockId' => $stock->id,
+            'symbol' => $stock->symbol,
+            'companyName' => $stock->company_name,
+            'sector' => $stock->sector?->name,
+            'marketDate' => $priceHistory->date?->toDateString() ?? now()->toDateString(),
+            'recordedAt' => now()->toIso8601String(),
+            'latestSyncedAt' => $priceHistory->updated_at?->toIso8601String() ?? now()->toIso8601String(),
+            'price' => (float) $priceHistory->closing_price,
+            'change' => (float) $priceHistory->change,
+            'changePercent' => (float) $priceHistory->change_percent,
+            'previousClose' => (float) $priceHistory->previous_closing,
+            'high' => (float) $priceHistory->max_price,
+            'low' => (float) $priceHistory->min_price,
+            'open' => $this->toFloat($row['open'], (float) $priceHistory->closing_price),
+            'volume' => (int) $priceHistory->traded_shares,
+        ];
+    }
+
+    private function persistRow(Stock $stock, array $row): PriceHistory
+    {
+        $today = now()->toDateString();
+        $closingPrice = $this->toFloat($row['ltp']);
+        $previousClosing = (float) ($stock->priceHistories()
+            ->whereDate('date', '<', $today)
+            ->orderByDesc('date')
+            ->value('closing_price') ?? $closingPrice);
+
+        return PriceHistory::query()->updateOrCreate(
+            [
+                'stock_id' => $stock->id,
+                'date' => $today,
+            ],
+            [
+                'closing_price' => $closingPrice,
+                'max_price' => $this->toFloat($row['high'], $closingPrice),
+                'min_price' => $this->toFloat($row['low'], $closingPrice),
+                'change' => round($closingPrice - $previousClosing, 2),
+                'change_percent' => $this->toFloat($row['change_percent']),
+                'previous_closing' => $previousClosing,
+                'traded_shares' => $this->toInt($row['quantity']),
+                'traded_amount' => 0,
+                'total_quantity' => 0,
+                'total_transaction' => 0,
+                'total_amount' => 0,
+                'no_of_transactions' => 0,
+            ],
+        );
     }
 
     private function toFloat(?string $value, float $fallback = 0): float

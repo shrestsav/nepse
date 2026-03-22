@@ -9,17 +9,6 @@ enum SyncMode: string
     case Smart = 'smart';
     case Live = 'live';
 
-    /**
-     * @return array<int, self>
-     */
-    public static function dashboardModes(): array
-    {
-        return [
-            self::Smart,
-            self::Live,
-        ];
-    }
-
     public function label(): string
     {
         return match ($this) {

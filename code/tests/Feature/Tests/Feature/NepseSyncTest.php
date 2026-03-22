@@ -28,12 +28,25 @@ test('full sync cannot be started from the dashboard', function () {
     expect(SyncLog::query()->count())->toBe(0);
 });
 
-test('sync start queues a sync log and job', function () {
+test('smart sync cannot be started from the dashboard', function () {
     Queue::fake();
 
     $this->actingAs(User::factory()->create())
         ->post(route('dashboard.sync.store'), [
             'mode' => SyncMode::Smart->value,
+        ])
+        ->assertSessionHasErrors('mode');
+
+    Queue::assertNothingPushed();
+    expect(SyncLog::query()->count())->toBe(0);
+});
+
+test('live sync start queues a sync log and job', function () {
+    Queue::fake();
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('dashboard.sync.store'), [
+            'mode' => SyncMode::Live->value,
         ])
         ->assertRedirect(route('dashboard.sync'));
 
@@ -42,7 +55,7 @@ test('sync start queues a sync log and job', function () {
     $syncLog = SyncLog::query()->latest('id')->first();
 
     expect($syncLog)->not->toBeNull()
-        ->and($syncLog->type)->toBe(SyncMode::Smart)
+        ->and($syncLog->type)->toBe(SyncMode::Live)
         ->and($syncLog->status)->toBe(SyncStatus::Queued)
         ->and($syncLog->start)->not->toBeNull();
 });

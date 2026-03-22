@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Nepse;
 
 use App\Http\Controllers\Controller;
 use App\Models\PriceHistory;
+use App\Models\Sector;
 use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -14,12 +15,32 @@ class StockController extends Controller
 {
     public function index(Request $request): Response
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'sector' => ['nullable', 'integer', 'exists:sectors,id'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $sectorId = isset($filters['sector']) ? (int) $filters['sector'] : null;
+        $totalStocks = Stock::query()->count();
+
         $stocks = Stock::query()
             ->with(['sector', 'latestPriceHistory'])
             ->withCount('priceHistories')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($stockQuery) use ($search): void {
+                    $stockQuery
+                        ->where('symbol', 'like', "%{$search}%")
+                        ->orWhere('company_name', 'like', "%{$search}%");
+                });
+            })
+            ->when(
+                $sectorId !== null,
+                fn ($query) => $query->where('sector_id', $sectorId),
+            )
             ->orderBy('symbol')
-            ->paginate(25)
-            ->through(fn (Stock $stock): array => [
+            ->get()
+            ->map(fn (Stock $stock): array => [
                 'id' => $stock->id,
                 'symbol' => $stock->symbol,
                 'companyName' => $stock->company_name,
@@ -29,12 +50,28 @@ class StockController extends Controller
                 'latestSyncedAt' => $stock->latestPriceHistory?->updated_at?->toIso8601String(),
                 'latestClose' => $stock->latestPriceHistory?->closing_price,
             ])
-            ->withQueryString();
+            ->values()
+            ->all();
 
         return Inertia::render('nepse/Stocks', [
             'stocks' => $stocks,
+            'sectors' => Sector::query()
+                ->withCount('stocks')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Sector $sector): array => [
+                    'id' => $sector->id,
+                    'name' => $sector->name,
+                    'stockCount' => $sector->stocks_count,
+                ])
+                ->all(),
             'filters' => [
-                'page' => (int) $request->integer('page', 1),
+                'search' => $search !== '' ? $search : null,
+                'sector' => $sectorId,
+            ],
+            'summary' => [
+                'totalStocks' => $totalStocks,
+                'filteredStocks' => count($stocks),
             ],
         ]);
     }

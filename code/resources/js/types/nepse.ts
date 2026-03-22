@@ -60,6 +60,37 @@ export type StockIndexItem = {
     latestClose: number | null;
 };
 
+export type SectorOption = {
+    id: number;
+    name: string;
+    stockCount: number;
+};
+
+export type WatchStockOption = {
+    id: number;
+    symbol: string;
+    companyName: string;
+    sector: string | null;
+};
+
+export type WatchStockQuote = {
+    stockId: number;
+    symbol: string;
+    companyName: string;
+    sector: string | null;
+    marketDate: string;
+    recordedAt: string;
+    latestSyncedAt: string;
+    price: number;
+    change: number;
+    changePercent: number;
+    previousClose: number;
+    high: number;
+    low: number;
+    open: number;
+    volume: number;
+};
+
 export type StockPriceHistoryItem = {
     id: number;
     date: string | null;

@@ -44,7 +44,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <span class="font-medium text-foreground">{{ recommendationDate }}</span>
             </div>
 
-            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <StatCard
                     title="Tracked stocks"
                     :value="counts.stocks"
@@ -55,12 +55,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     title="Sectors"
                     :value="counts.sectors"
                     description="Unique market sectors discovered during catalog sync."
-                />
-                <StatCard
-                    title="Price history rows"
-                    :value="counts.priceHistories"
-                    description="Historical rows currently available for analytics."
-                    :href="dashboardRoutes.sync()"
+                    href="/dashboard/sectors"
                 />
                 <StatCard
                     title="Recommendation sets"

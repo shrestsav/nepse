@@ -20,10 +20,7 @@ class StartSyncRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'mode' => ['required', Rule::in(array_map(
-                static fn (SyncMode $mode): string => $mode->value,
-                SyncMode::dashboardModes(),
-            ))],
+            'mode' => ['required', Rule::in([SyncMode::Live->value])],
         ];
     }
 }

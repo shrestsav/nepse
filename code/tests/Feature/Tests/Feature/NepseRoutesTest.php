@@ -8,6 +8,8 @@ use Inertia\Testing\AssertableInertia as Assert;
 dataset('nepse routes', [
     'dashboard' => 'dashboard',
     'recommendations' => 'dashboard.recommendations',
+    'watch stock' => 'dashboard.watch-stock',
+    'sectors' => 'dashboard.sectors',
     'sync' => 'dashboard.sync',
     'stocks' => 'dashboard.stocks',
 ]);
@@ -97,17 +99,30 @@ test('recommendation page receives grouped props', function () {
         );
 });
 
-test('sync and stocks pages render for authenticated users', function () {
+test('supporting nepse pages render for authenticated users', function () {
     $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard.watch-stock'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('nepse/WatchStock')
+            ->has('stocks'),
+        );
+
+    $this->actingAs($user)
+        ->get(route('dashboard.sectors'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('nepse/Sectors')
+            ->has('sectors'),
+        );
 
     $this->actingAs($user)
         ->get(route('dashboard.sync'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('nepse/Sync')
-            ->has('modes', 2)
-            ->where('modes.0.value', 'smart')
-            ->where('modes.1.value', 'live'),
+            ->component('nepse/Sync'),
         );
 
     $this->actingAs($user)
@@ -115,6 +130,8 @@ test('sync and stocks pages render for authenticated users', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('nepse/Stocks')
-            ->has('stocks.data'),
+            ->has('stocks')
+            ->has('sectors')
+            ->where('summary.totalStocks', 0),
         );
 });
