@@ -4,6 +4,7 @@ namespace App\Services\Nepse;
 
 use App\Models\PriceHistory;
 use App\Models\Stock;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -23,18 +24,31 @@ class NepaliPaisaDailyPriceSynchronizer
             : '';
 
         try {
-            $response = Http::timeout(30)
-                ->acceptJson()
+            $response = Http::timeout(45)
+                ->retry(3, fn (int $attempt): int => $attempt * 1500, throw: false)
+                ->withHeaders($this->requestHeaders())
                 ->get(config('nepse.nepalipaisa.daily_price_url'), [
                     'stockSymbol' => $requestedSymbol,
                     'tradeDate' => $tradeDate,
                 ])
                 ->throw();
+        } catch (ConnectionException $exception) {
+            throw new RuntimeException(
+                "NepaliPaisa daily price request failed for [{$tradeDate}] after retries.",
+                previous: $exception,
+            );
         } catch (RequestException $exception) {
             if ($exception->response?->status() === 404) {
                 throw new RuntimeException(
                     "NepaliPaisa daily price endpoint returned 404 for [{$tradeDate}]. ".
                     'The configured daily price URL is currently unavailable upstream.',
+                    previous: $exception,
+                );
+            }
+
+            if ($exception->response?->status() === 522) {
+                throw new RuntimeException(
+                    "NepaliPaisa daily price endpoint timed out upstream for [{$tradeDate}] after retries.",
                     previous: $exception,
                 );
             }
@@ -131,5 +145,27 @@ class NepaliPaisaDailyPriceSynchronizer
         $normalized = trim(str_replace(',', '', (string) $value));
 
         return is_numeric($normalized) ? (int) round((float) $normalized) : 0;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function requestHeaders(): array
+    {
+        return [
+            'Accept' => 'application/json, text/javascript, */*; q=0.01',
+            'Accept-Language' => 'en-US,en;q=0.9',
+            'Content-Type' => 'application/json; charset=utf-8',
+            'Priority' => 'u=1, i',
+            'Referer' => 'https://nepalipaisa.com/today-share-price',
+            'Sec-CH-UA' => '"Chromium";v="146", "Not-A.Brand";v="24", "Google Chrome";v="146"',
+            'Sec-CH-UA-Mobile' => '?0',
+            'Sec-CH-UA-Platform' => '"macOS"',
+            'Sec-Fetch-Dest' => 'empty',
+            'Sec-Fetch-Mode' => 'cors',
+            'Sec-Fetch-Site' => 'same-origin',
+            'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ];
     }
 }

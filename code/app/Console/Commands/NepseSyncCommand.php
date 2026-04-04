@@ -156,6 +156,10 @@ HELP;
                     $syncedSymbols[$symbol] = true;
                 }
                 $this->components->info("{$tradeDate}: fetched {$result['rowsSynced']} stock price row(s)");
+
+                if (! app()->runningUnitTests()) {
+                    usleep(250_000);
+                }
             }
         } catch (Throwable $throwable) {
             $message = "{$tradeDate}: {$throwable->getMessage()}";
