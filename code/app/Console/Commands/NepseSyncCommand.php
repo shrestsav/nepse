@@ -152,21 +152,13 @@ HELP;
                 $tradeDate = $date->toDateString();
                 $result = $dailyPriceSynchronizer->syncTradeDate($tradeDate, $selectedSymbols);
                 $historyRows += $result['rowsSynced'];
-
-                if ($result['syncedSymbols'] === []) {
-                    $this->line("{$tradeDate}: 0 row(s)");
-                    continue;
-                }
-
                 foreach ($result['syncedSymbols'] as $symbol) {
                     $syncedSymbols[$symbol] = true;
-                    $this->components->info("{$tradeDate} | {$symbol}: 1 row(s)");
                 }
-
-                $this->newLine();
+                $this->components->info("{$tradeDate}: fetched {$result['rowsSynced']} stock price row(s)");
             }
         } catch (Throwable $throwable) {
-            $message = $throwable->getMessage();
+            $message = "{$tradeDate}: {$throwable->getMessage()}";
             $this->components->error($message);
             $tracker->fail($syncLog, $message);
 

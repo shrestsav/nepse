@@ -120,7 +120,7 @@ php artisan nepse:sync daily --symbol=ADBL
 
 - full historical backfill
 - always starts from `NEPSE_FULL_SYNC_FROM_DATE`
-- currently defaults to `2020-01-01`
+- currently defaults to `2021-01-01`
 - supports:
 
 ```bash

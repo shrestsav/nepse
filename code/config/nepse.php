@@ -31,7 +31,7 @@ return [
         'daily_lookback_days' => (int) env('NEPSE_DAILY_SYNC_LOOKBACK_DAYS', 7),
         'daily_schedule_time' => env('NEPSE_DAILY_SYNC_SCHEDULE_TIME', '18:15'),
         'floorsheet_schedule_time' => env('NEPSE_FLOORSHEET_SYNC_SCHEDULE_TIME', '18:45'),
-        'full_from_date' => env('NEPSE_FULL_SYNC_FROM_DATE', '2020-01-01'),
+        'full_from_date' => env('NEPSE_FULL_SYNC_FROM_DATE', '2021-01-01'),
     ],
 
     'recommendations' => [

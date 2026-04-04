@@ -97,7 +97,7 @@ test('full sync command uses the configured fixed start date', function () {
         'mode' => 'full',
         '--symbol' => ['AAA'],
     ])
-        ->expectsOutputToContain('2026-03-20 | AAA: 1 row(s)')
+        ->expectsOutputToContain('2026-03-20: fetched 1 stock price row(s)')
         ->assertExitCode(0);
 
     $syncLog = SyncLog::query()->latest('id')->first();
