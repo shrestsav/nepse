@@ -14,14 +14,11 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 use Throwable;
 
 class NepseSyncCommand extends Command
 {
-    private const COMMAND_LOCK_KEY = 'nepse:sync:command';
-
     /**
      * Daily:
      * `php artisan nepse:sync daily`
@@ -68,14 +65,6 @@ HELP;
         NepaliPaisaDailyPriceSynchronizer $dailyPriceSynchronizer,
         SyncLogTracker $tracker,
     ): int {
-        $lock = Cache::lock(self::COMMAND_LOCK_KEY, 7200);
-
-        if (! $lock->get()) {
-            $this->components->error('Another NEPSE CLI sync is already running. Wait for it to finish before starting another.');
-
-            return self::FAILURE;
-        }
-
         try {
             $mode = $this->resolveMode();
             $this->guardUnsupportedOptions($mode);
@@ -194,8 +183,6 @@ HELP;
             $this->components->error($throwable->getMessage());
 
             return self::FAILURE;
-        } finally {
-            $lock->release();
         }
     }
 

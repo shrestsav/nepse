@@ -18,9 +18,19 @@ return [
         'limit' => (int) env('NEPSE_NEPALIPAISA_LIMIT', 3000),
     ],
 
+    'chukul' => [
+        'broker_url' => env('NEPSE_CHUKUL_BROKER_URL', 'https://chukul.com/api/broker/'),
+        'floorsheet_url' => env(
+            'NEPSE_CHUKUL_FLOORSHEET_URL',
+            'https://chukul.com/api/data/v2/floorsheet/bydate/',
+        ),
+        'floorsheet_page_size' => (int) env('NEPSE_CHUKUL_FLOORSHEET_PAGE_SIZE', 500),
+    ],
+
     'sync' => [
         'daily_lookback_days' => (int) env('NEPSE_DAILY_SYNC_LOOKBACK_DAYS', 7),
         'daily_schedule_time' => env('NEPSE_DAILY_SYNC_SCHEDULE_TIME', '18:15'),
+        'floorsheet_schedule_time' => env('NEPSE_FLOORSHEET_SYNC_SCHEDULE_TIME', '18:45'),
         'full_from_date' => env('NEPSE_FULL_SYNC_FROM_DATE', '2020-01-01'),
     ],
 

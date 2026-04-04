@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\StockFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Stock extends Model
 {
-    /** @use HasFactory<\Database\Factories\StockFactory> */
+    /** @use HasFactory<StockFactory> */
     use HasFactory;
 
     /**
@@ -60,5 +61,13 @@ class Stock extends Model
     public function backtestTrades(): HasMany
     {
         return $this->hasMany(BacktestTrade::class);
+    }
+
+    /**
+     * @return HasMany<Floorsheet, $this>
+     */
+    public function floorsheets(): HasMany
+    {
+        return $this->hasMany(Floorsheet::class)->orderByDesc('trade_date');
     }
 }

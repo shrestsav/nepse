@@ -10,6 +10,7 @@ dataset('nepse routes', [
     'recommendations' => 'dashboard.recommendations',
     'watch stock' => 'dashboard.watch-stock',
     'sectors' => 'dashboard.sectors',
+    'floorsheet' => 'dashboard.floorsheet',
     'sync' => 'dashboard.sync',
     'stocks' => 'dashboard.stocks',
 ]);
@@ -19,7 +20,7 @@ test('guests are redirected away from nepse routes', function (string $route) {
 })->with('nepse routes');
 
 test('authenticated users can view the nepse dashboard', function () {
-    $service = \Mockery::mock(RecommendationService::class);
+    $service = Mockery::mock(RecommendationService::class);
     $service->shouldReceive('summary')->once()->andReturn([
         'counts' => [
             'stocks' => 25,
@@ -48,7 +49,7 @@ test('authenticated users can view the nepse dashboard', function () {
 });
 
 test('recommendation page receives grouped props', function () {
-    $service = \Mockery::mock(RecommendationService::class);
+    $service = Mockery::mock(RecommendationService::class);
     $selectedDate = CarbonImmutable::parse('2026-03-21');
     $service->shouldReceive('resolveAsOfDate')->once()->with(null)->andReturn($selectedDate);
     $service->shouldReceive('buildRecommendationGroups')->once()->with($selectedDate)->andReturn([
@@ -116,6 +117,16 @@ test('supporting nepse pages render for authenticated users', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('nepse/Sectors')
             ->has('sectors'),
+        );
+
+    $this->actingAs($user)
+        ->get(route('dashboard.floorsheet'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('nepse/Floorsheet')
+            ->has('floorsheets')
+            ->has('brokers')
+            ->where('summary.matchingRows', 0),
         );
 
     $this->actingAs($user)

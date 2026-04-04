@@ -49,6 +49,32 @@ export type SyncModeOption = {
     label: string;
 };
 
+export type BrokerOption = {
+    brokerNo: string;
+    brokerName: string;
+};
+
+export type FloorsheetRow = {
+    id: number;
+    transaction: string;
+    symbol: string;
+    buyerBrokerNo: string | null;
+    buyerBrokerName: string | null;
+    sellerBrokerNo: string | null;
+    sellerBrokerName: string | null;
+    quantity: number;
+    rate: number;
+    amount: number;
+};
+
+export type FloorsheetFilters = {
+    date: string;
+    symbol: string | null;
+    buyer: string | null;
+    seller: string | null;
+    quantityRange: 'all' | '0-10' | '10-100' | '100-1k';
+};
+
 export type StockIndexItem = {
     id: number;
     symbol: string;
@@ -131,6 +157,8 @@ export type Paginated<T> = {
     last_page: number;
     per_page: number;
     total: number;
+    from?: number | null;
+    to?: number | null;
     prev_page_url: string | null;
     next_page_url: string | null;
 };

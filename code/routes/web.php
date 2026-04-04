@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Nepse\BacktestingController;
 use App\Http\Controllers\Nepse\DashboardController;
+use App\Http\Controllers\Nepse\FloorsheetController;
 use App\Http\Controllers\Nepse\RecommendationController;
 use App\Http\Controllers\Nepse\SectorController;
 use App\Http\Controllers\Nepse\StockController;
@@ -24,6 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard/backtesting', [BacktestingController::class, 'index'])->name('dashboard.backtesting');
     Route::post('dashboard/backtesting', [BacktestingController::class, 'store'])->name('dashboard.backtesting.store');
     Route::get('dashboard/backtesting/{run}', [BacktestingController::class, 'show'])->name('dashboard.backtesting.show');
+    Route::get('dashboard/floorsheet', [FloorsheetController::class, 'index'])->name('dashboard.floorsheet');
     Route::get('dashboard/sync', [SyncController::class, 'index'])->name('dashboard.sync');
     Route::post('dashboard/sync', [SyncController::class, 'store'])->name('dashboard.sync.store');
     Route::get('dashboard/sectors', [SectorController::class, 'index'])->name('dashboard.sectors');

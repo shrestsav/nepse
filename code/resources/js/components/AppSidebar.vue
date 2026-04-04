@@ -57,6 +57,11 @@ const mainNavItems: NavItem[] = [
         icon: RefreshCcw,
     },
     {
+        title: 'Floorsheet',
+        href: '/dashboard/floorsheet',
+        icon: TableProperties,
+    },
+    {
         title: 'Stocks',
         href: dashboardRoutes.stocks(),
         icon: TableProperties,
