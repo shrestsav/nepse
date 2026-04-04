@@ -9,6 +9,7 @@ use App\Models\Stock;
 use App\Models\SyncLog;
 use App\Services\Nepse\MeroLaganiCatalogImporter;
 use App\Services\Nepse\NepaliPaisaDailyPriceSynchronizer;
+use App\Services\Nepse\NepaliPaisaHistorySynchronizer;
 use App\Services\Nepse\SyncLogTracker;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
@@ -63,6 +64,7 @@ HELP;
     public function handle(
         MeroLaganiCatalogImporter $catalogImporter,
         NepaliPaisaDailyPriceSynchronizer $dailyPriceSynchronizer,
+        NepaliPaisaHistorySynchronizer $historySynchronizer,
         SyncLogTracker $tracker,
     ): int {
         try {
@@ -119,71 +121,139 @@ HELP;
                 return self::SUCCESS;
             }
 
-            $period = CarbonPeriod::create($dateRange['start'], $dateRange['end']);
-            $totalDays = $dateRange['start']->diffInDays($dateRange['end']) + 1;
-            $progressBar = $this->output->createProgressBar($totalDays);
-            $progressBar->start();
-
-            $historyRows = 0;
-            $syncedSymbols = [];
-
-            foreach ($period as $date) {
-                $tradeDate = $date->toDateString();
-
-                try {
-                    $result = $dailyPriceSynchronizer->syncTradeDate($tradeDate, $this->selectedSymbols());
-                    $historyRows += $result['rowsSynced'];
-
-                    foreach ($result['syncedSymbols'] as $symbol) {
-                        $syncedSymbols[$symbol] = true;
-                    }
-
-                    if ($this->output->isVerbose()) {
-                        $this->newLine();
-                        $this->line("{$tradeDate}: {$result['rowsSynced']} row(s)");
-                    }
-                } catch (Throwable $throwable) {
-                    $message = "{$tradeDate}: {$throwable->getMessage()}";
-
-                    if ($this->output->isVerbose() || $this->option('show-errors')) {
-                        $this->newLine();
-                        $this->components->error($message);
-                    }
-
-                    $progressBar->finish();
-                    $this->newLine(2);
-                    $tracker->fail($syncLog, $message);
-
-                    return self::FAILURE;
-                }
-
-                $progressBar->advance();
-            }
-
-            $progressBar->finish();
-            $this->newLine(2);
-
-            $tracker->completeImmediately(
-                $syncLog,
-                $stocks->count(),
-                count($syncedSymbols),
-            );
-
-            $fresh = $syncLog->fresh();
-
-            $this->components->info($mode->label().' sync completed successfully.');
-            $this->line("Stocks considered: {$fresh?->processed_stocks}/{$fresh?->total_stocks}");
-            $this->line("Stocks with data: {$fresh?->total_synced}");
-            $this->line("Trade dates processed: {$totalDays}");
-            $this->line("History rows returned: {$historyRows}");
-
-            return self::SUCCESS;
+            return $mode === SyncMode::Full
+                ? $this->runFullSync($syncLog, $stocks, $dateRange, $historySynchronizer, $tracker)
+                : $this->runDateBasedSync($syncLog, $stocks, $dateRange, $dailyPriceSynchronizer, $tracker);
         } catch (Throwable $throwable) {
             $tracker->fail($syncLog, $throwable->getMessage());
             $this->components->error($throwable->getMessage());
 
             return self::FAILURE;
         }
+    }
+
+    /**
+     * @param Collection<int, Stock> $stocks
+     * @param array{start: CarbonImmutable, end: CarbonImmutable} $dateRange
+     */
+    private function runFullSync(
+        SyncLog $syncLog,
+        Collection $stocks,
+        array $dateRange,
+        NepaliPaisaHistorySynchronizer $historySynchronizer,
+        SyncLogTracker $tracker,
+    ): int {
+        $historyRows = 0;
+        $successfulStocks = 0;
+
+        foreach ($stocks->values() as $index => $stock) {
+            $this->components->info(sprintf(
+                '[%d/%d] %s | %s -> %s',
+                $index + 1,
+                $stocks->count(),
+                $stock->symbol,
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ));
+
+            try {
+                $rowsSynced = $historySynchronizer->sync($stock, SyncMode::Full);
+                $historyRows += $rowsSynced;
+                $successfulStocks += $rowsSynced > 0 ? 1 : 0;
+
+                $this->line("Rows synced: {$rowsSynced}");
+                $this->newLine();
+            } catch (Throwable $throwable) {
+                $message = "{$stock->symbol}: {$throwable->getMessage()}";
+                $this->components->error($message);
+                $tracker->fail($syncLog, $message);
+
+                return self::FAILURE;
+            }
+        }
+
+        $tracker->completeImmediately($syncLog, $stocks->count(), $successfulStocks);
+
+        $fresh = $syncLog->fresh();
+
+        $this->components->info(SyncMode::Full->label().' sync completed successfully.');
+        $this->line("Stocks considered: {$fresh?->processed_stocks}/{$fresh?->total_stocks}");
+        $this->line("Stocks with data: {$fresh?->total_synced}");
+        $this->line("History rows returned: {$historyRows}");
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @param Collection<int, Stock> $stocks
+     * @param array{start: CarbonImmutable, end: CarbonImmutable} $dateRange
+     */
+    private function runDateBasedSync(
+        SyncLog $syncLog,
+        Collection $stocks,
+        array $dateRange,
+        NepaliPaisaDailyPriceSynchronizer $dailyPriceSynchronizer,
+        SyncLogTracker $tracker,
+    ): int {
+        $period = CarbonPeriod::create($dateRange['start'], $dateRange['end']);
+        $totalDays = $dateRange['start']->diffInDays($dateRange['end']) + 1;
+        $progressBar = $this->output->createProgressBar($totalDays);
+        $progressBar->start();
+
+        $historyRows = 0;
+        $syncedSymbols = [];
+
+        foreach ($period as $date) {
+            $tradeDate = $date->toDateString();
+
+            try {
+                $result = $dailyPriceSynchronizer->syncTradeDate($tradeDate, $this->selectedSymbols());
+                $historyRows += $result['rowsSynced'];
+
+                foreach ($result['syncedSymbols'] as $symbol) {
+                    $syncedSymbols[$symbol] = true;
+                }
+
+                if ($this->output->isVerbose()) {
+                    $this->newLine();
+                    $this->line("{$tradeDate}: {$result['rowsSynced']} row(s)");
+                }
+            } catch (Throwable $throwable) {
+                $message = "{$tradeDate}: {$throwable->getMessage()}";
+
+                if ($this->output->isVerbose() || $this->option('show-errors')) {
+                    $this->newLine();
+                    $this->components->error($message);
+                }
+
+                $progressBar->finish();
+                $this->newLine(2);
+                $tracker->fail($syncLog, $message);
+
+                return self::FAILURE;
+            }
+
+            $progressBar->advance();
+        }
+
+        $progressBar->finish();
+        $this->newLine(2);
+
+        $tracker->completeImmediately(
+            $syncLog,
+            $stocks->count(),
+            count($syncedSymbols),
+        );
+
+        $fresh = $syncLog->fresh();
+
+        $this->components->info($syncLog->type->label().' sync completed successfully.');
+        $this->line("Stocks considered: {$fresh?->processed_stocks}/{$fresh?->total_stocks}");
+        $this->line("Stocks with data: {$fresh?->total_synced}");
+        $this->line("Trade dates processed: {$totalDays}");
+        $this->line("History rows returned: {$historyRows}");
+
+        return self::SUCCESS;
     }
 
     private function resolveMode(): SyncMode
