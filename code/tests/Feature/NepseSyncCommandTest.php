@@ -84,8 +84,10 @@ test('full sync command uses the configured fixed start date', function () {
             return Http::response(commandDetailHtml('Alpha Bank', 'Commercial Bank'), 200);
         }
 
-        if ($request->url() === config('nepse.nepalipaisa.history_url')) {
-            return Http::response(historyPriceResponse('2026-03-20', '2026-03-22'), 200);
+        if (str_starts_with($request->url(), config('nepse.nepalipaisa.daily_price_url'))) {
+            parse_str(parse_url($request->url(), PHP_URL_QUERY) ?? '', $query);
+
+            return Http::response(dailyPriceResponse('AAA', (string) ($query['tradeDate'] ?? '2026-03-22')), 200);
         }
 
         return Http::response([], 500);
@@ -95,7 +97,7 @@ test('full sync command uses the configured fixed start date', function () {
         'mode' => 'full',
         '--symbol' => ['AAA'],
     ])
-        ->expectsOutputToContain('[1/1] AAA | 2026-03-20 -> 2026-03-22')
+        ->expectsOutputToContain('2026-03-20 | AAA: 1 row(s)')
         ->assertExitCode(0);
 
     $syncLog = SyncLog::query()->latest('id')->first();
@@ -103,25 +105,17 @@ test('full sync command uses the configured fixed start date', function () {
     expect($syncLog?->type)->toBe(SyncMode::Full)
         ->and($syncLog?->status)->toBe(SyncStatus::Completed);
 
-    $historyRequests = collect(Http::recorded())
+    $dailyRequests = collect(Http::recorded())
         ->pluck(0)
-        ->filter(fn (HttpRequest $request): bool => $request->url() === config('nepse.nepalipaisa.history_url'))
+        ->filter(fn (HttpRequest $request): bool => str_starts_with($request->url(), config('nepse.nepalipaisa.daily_price_url')))
         ->values();
 
-    expect($historyRequests)->toHaveCount(1);
-    Http::assertSent(function (HttpRequest $request): bool {
-        if ($request->url() !== config('nepse.nepalipaisa.history_url')) {
-            return false;
-        }
+    expect($dailyRequests)->toHaveCount(3);
+    Http::assertSent(fn (HttpRequest $request): bool => str_starts_with($request->url(), config('nepse.nepalipaisa.daily_price_url'))
+        && str_contains($request->url(), 'stockSymbol=AAA')
+        && str_contains($request->url(), 'tradeDate=2026-03-20'));
 
-        $payload = json_decode($request->body(), true);
-
-        return $payload['StockSymbol'] === 'AAA'
-            && $payload['FromDate'] === '2026-03-20'
-            && $payload['ToDate'] === '2026-03-22';
-    });
-
-    expect(PriceHistory::query()->count())->toBeGreaterThanOrEqual(2)
+    expect(PriceHistory::query()->count())->toBe(3)
         ->and(PriceHistory::query()->whereDate('date', '2026-03-20')->exists())->toBeTrue()
         ->and(PriceHistory::query()->whereDate('date', '2026-03-22')->exists())->toBeTrue();
 });
@@ -379,26 +373,5 @@ function dailyPriceResponse(string $symbol, string $tradeDate): array
                 'totalTxns' => 56,
             ],
         ],
-    ];
-}
-
-function historyPriceResponse(string ...$tradeDates): array
-{
-    return [
-        'd' => collect($tradeDates)->map(fn (string $tradeDate): array => [
-            'AsOfDateShortString' => $tradeDate,
-            'ClosingPrice' => '367.00',
-            'MaxPrice' => '370.00',
-            'MinPrice' => '359.00',
-            'Difference' => '1.00',
-            'PercentDifference' => '0.27',
-            'PreviousClosing' => '366.00',
-            'TradedShares' => '7109',
-            'TradedAmount' => '2563497',
-            'TotalQuantity' => '7109',
-            'TotalTransaction' => '56',
-            'TotalAmount' => '2563497',
-            'NoOfTransaction' => '56',
-        ])->all(),
     ];
 }

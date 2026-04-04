@@ -9,7 +9,6 @@ use App\Models\Stock;
 use App\Models\SyncLog;
 use App\Services\Nepse\MeroLaganiCatalogImporter;
 use App\Services\Nepse\NepaliPaisaDailyPriceSynchronizer;
-use App\Services\Nepse\NepaliPaisaHistorySynchronizer;
 use App\Services\Nepse\SyncLogTracker;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
@@ -64,7 +63,6 @@ HELP;
     public function handle(
         MeroLaganiCatalogImporter $catalogImporter,
         NepaliPaisaDailyPriceSynchronizer $dailyPriceSynchronizer,
-        NepaliPaisaHistorySynchronizer $historySynchronizer,
         SyncLogTracker $tracker,
     ): int {
         try {
@@ -122,7 +120,7 @@ HELP;
             }
 
             return $mode === SyncMode::Full
-                ? $this->runFullSync($syncLog, $stocks, $dateRange, $historySynchronizer, $tracker)
+                ? $this->runFullSync($syncLog, $stocks, $dateRange, $dailyPriceSynchronizer, $tracker)
                 : $this->runDateBasedSync($syncLog, $stocks, $dateRange, $dailyPriceSynchronizer, $tracker);
         } catch (Throwable $throwable) {
             $tracker->fail($syncLog, $throwable->getMessage());
@@ -140,45 +138,49 @@ HELP;
         SyncLog $syncLog,
         Collection $stocks,
         array $dateRange,
-        NepaliPaisaHistorySynchronizer $historySynchronizer,
+        NepaliPaisaDailyPriceSynchronizer $dailyPriceSynchronizer,
         SyncLogTracker $tracker,
     ): int {
+        $selectedSymbols = $this->selectedSymbols();
+        $period = CarbonPeriod::create($dateRange['start'], $dateRange['end']);
         $historyRows = 0;
-        $successfulStocks = 0;
+        $syncedSymbols = [];
+        $totalDays = $dateRange['start']->diffInDays($dateRange['end']) + 1;
 
-        foreach ($stocks->values() as $index => $stock) {
-            $this->components->info(sprintf(
-                '[%d/%d] %s | %s -> %s',
-                $index + 1,
-                $stocks->count(),
-                $stock->symbol,
-                $dateRange['start']->toDateString(),
-                $dateRange['end']->toDateString(),
-            ));
+        try {
+            foreach ($period as $date) {
+                $tradeDate = $date->toDateString();
+                $result = $dailyPriceSynchronizer->syncTradeDate($tradeDate, $selectedSymbols);
+                $historyRows += $result['rowsSynced'];
 
-            try {
-                $rowsSynced = $historySynchronizer->sync($stock, SyncMode::Full);
-                $historyRows += $rowsSynced;
-                $successfulStocks += $rowsSynced > 0 ? 1 : 0;
+                if ($result['syncedSymbols'] === []) {
+                    $this->line("{$tradeDate}: 0 row(s)");
+                    continue;
+                }
 
-                $this->line("Rows synced: {$rowsSynced}");
+                foreach ($result['syncedSymbols'] as $symbol) {
+                    $syncedSymbols[$symbol] = true;
+                    $this->components->info("{$tradeDate} | {$symbol}: 1 row(s)");
+                }
+
                 $this->newLine();
-            } catch (Throwable $throwable) {
-                $message = "{$stock->symbol}: {$throwable->getMessage()}";
-                $this->components->error($message);
-                $tracker->fail($syncLog, $message);
-
-                return self::FAILURE;
             }
+        } catch (Throwable $throwable) {
+            $message = $throwable->getMessage();
+            $this->components->error($message);
+            $tracker->fail($syncLog, $message);
+
+            return self::FAILURE;
         }
 
-        $tracker->completeImmediately($syncLog, $stocks->count(), $successfulStocks);
+        $tracker->completeImmediately($syncLog, $stocks->count(), count($syncedSymbols));
 
         $fresh = $syncLog->fresh();
 
         $this->components->info(SyncMode::Full->label().' sync completed successfully.');
         $this->line("Stocks considered: {$fresh?->processed_stocks}/{$fresh?->total_stocks}");
         $this->line("Stocks with data: {$fresh?->total_synced}");
+        $this->line("Trade dates processed: {$totalDays}");
         $this->line("History rows returned: {$historyRows}");
 
         return self::SUCCESS;
