@@ -9,8 +9,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('nepse:sync daily')
-    ->dailyAt((string) config('nepse.sync.daily_schedule_time', '18:15'))
-    ->timezone((string) config('app.timezone'))
+    ->dailyAt('09:25')
+    ->timezone('UTC')
     ->withoutOverlapping();
 
 Schedule::command('nepse:floorsheet-sync')
