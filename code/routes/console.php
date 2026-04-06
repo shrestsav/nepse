@@ -23,17 +23,32 @@ if (
     })->purpose('Starts Laravel Boost in non-local environments.');
 }
 
+// 09:25 UTC = 03:10 PM Nepal Time (NPT)
 Schedule::command('nepse:sync daily')
     ->dailyAt('09:25')
     ->timezone('UTC')
     ->withoutOverlapping();
 
+// 11:15 UTC = 05:00 PM Nepal Time (NPT)
 Schedule::command('nepse:floorsheet-sync')
     ->dailyAt('11:15')
     ->timezone('UTC')
     ->withoutOverlapping();
 
+// 16:15 UTC = 10:00 PM Nepal Time (NPT)
+Schedule::command('nepse:floorsheet-sync')
+    ->dailyAt('16:15')
+    ->timezone('UTC')
+    ->withoutOverlapping();
+
+// 12:15 UTC = 06:00 PM Nepal Time (NPT)
 Schedule::command('nepse:floorsheet-aggregate')
     ->dailyAt('12:15')
+    ->timezone('UTC')
+    ->withoutOverlapping();
+
+// 17:15 UTC = 11:00 PM Nepal Time (NPT)
+Schedule::command('nepse:floorsheet-aggregate')
+    ->dailyAt('17:15')
     ->timezone('UTC')
     ->withoutOverlapping();
