@@ -32,3 +32,8 @@ Schedule::command('nepse:floorsheet-sync')
     ->dailyAt('11:15')
     ->timezone('UTC')
     ->withoutOverlapping();
+
+Schedule::command('nepse:floorsheet-aggregate')
+    ->dailyAt('12:15')
+    ->timezone('UTC')
+    ->withoutOverlapping();
