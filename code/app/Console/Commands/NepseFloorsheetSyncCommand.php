@@ -41,7 +41,24 @@ class NepseFloorsheetSyncCommand extends Command
             ];
 
             foreach ($tradeDates as $tradeDate) {
-                $result = $synchronizer->syncTradeDate($tradeDate, refreshReferences: false);
+                $result = $synchronizer->syncTradeDate(
+                    $tradeDate,
+                    refreshReferences: false,
+                    onPageFetched: function (array $page): void {
+                        $suffix = $page['isLastPage'] ? ' (last page)' : '';
+
+                        $this->line(sprintf(
+                            '[%s] page %d: fetched %d row(s), synced %d row(s), unresolved stocks %d, unresolved brokers %d%s',
+                            $page['tradeDate'],
+                            $page['page'],
+                            $page['pageRows'],
+                            $page['pageRowsSynced'],
+                            $page['pageUnresolvedStocks'],
+                            $page['pageUnresolvedBrokers'],
+                            $suffix,
+                        ));
+                    },
+                );
                 $summary['pagesFetched'] += $result['pagesFetched'];
                 $summary['rowsSynced'] += $result['rowsSynced'];
                 $summary['unresolvedStocks'] += $result['unresolvedStocks'];

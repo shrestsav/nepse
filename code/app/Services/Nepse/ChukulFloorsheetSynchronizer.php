@@ -36,6 +36,18 @@ class ChukulFloorsheetSynchronizer
     }
 
     /**
+     * @param  null|callable(array{
+     *     tradeDate: string,
+     *     page: int,
+     *     pageRows: int,
+     *     pageRowsSynced: int,
+     *     pageUnresolvedStocks: int,
+     *     pageUnresolvedBrokers: int,
+     *     totalRowsSynced: int,
+     *     totalUnresolvedStocks: int,
+     *     totalUnresolvedBrokers: int,
+     *     isLastPage: bool
+     * }): void  $onPageFetched
      * @return array{
      *     brokersSynced: int,
      *     pagesFetched: int,
@@ -44,7 +56,7 @@ class ChukulFloorsheetSynchronizer
      *     unresolvedBrokers: int
      * }
      */
-    public function syncTradeDate(string $tradeDate, bool $refreshReferences = true): array
+    public function syncTradeDate(string $tradeDate, bool $refreshReferences = true, ?callable $onPageFetched = null): array
     {
         $normalizedTradeDate = CarbonImmutable::parse($tradeDate)->toDateString();
 
@@ -64,8 +76,24 @@ class ChukulFloorsheetSynchronizer
             $payload = $this->fetchPage($normalizedTradeDate, $page, $pageSize);
             $rows = $payload['rows'];
             $pagesFetched++;
+            $pageRows = $rows->count();
+            $pageRowsSynced = 0;
+            $pageUnresolvedStocks = 0;
+            $pageUnresolvedBrokers = 0;
 
             if ($rows->isEmpty()) {
+                $onPageFetched?->__invoke([
+                    'tradeDate' => $normalizedTradeDate,
+                    'page' => $page,
+                    'pageRows' => 0,
+                    'pageRowsSynced' => 0,
+                    'pageUnresolvedStocks' => 0,
+                    'pageUnresolvedBrokers' => 0,
+                    'totalRowsSynced' => $rowsSynced,
+                    'totalUnresolvedStocks' => $unresolvedStocks,
+                    'totalUnresolvedBrokers' => $unresolvedBrokers,
+                    'isLastPage' => true,
+                ]);
                 break;
             }
 
@@ -86,14 +114,17 @@ class ChukulFloorsheetSynchronizer
 
                 if (! $stock instanceof Stock) {
                     $unresolvedStocks++;
+                    $pageUnresolvedStocks++;
                 }
 
                 if ($row['buyer_broker_no'] !== '' && ! $buyerBroker instanceof Broker) {
                     $unresolvedBrokers++;
+                    $pageUnresolvedBrokers++;
                 }
 
                 if ($row['seller_broker_no'] !== '' && ! $sellerBroker instanceof Broker) {
                     $unresolvedBrokers++;
+                    $pageUnresolvedBrokers++;
                 }
 
                 Floorsheet::query()->updateOrCreate(
@@ -113,9 +144,25 @@ class ChukulFloorsheetSynchronizer
                 );
 
                 $rowsSynced++;
+                $pageRowsSynced++;
             }
 
-            if ($rows->count() < $pageSize) {
+            $isLastPage = $pageRows < $pageSize;
+
+            $onPageFetched?->__invoke([
+                'tradeDate' => $normalizedTradeDate,
+                'page' => $page,
+                'pageRows' => $pageRows,
+                'pageRowsSynced' => $pageRowsSynced,
+                'pageUnresolvedStocks' => $pageUnresolvedStocks,
+                'pageUnresolvedBrokers' => $pageUnresolvedBrokers,
+                'totalRowsSynced' => $rowsSynced,
+                'totalUnresolvedStocks' => $unresolvedStocks,
+                'totalUnresolvedBrokers' => $unresolvedBrokers,
+                'isLastPage' => $isLastPage,
+            ]);
+
+            if ($isLastPage) {
                 break;
             }
 

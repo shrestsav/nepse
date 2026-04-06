@@ -73,7 +73,13 @@ class NepseFloorsheetAggregateCommand extends Command
         }
 
         if ($from === null) {
-            return [CarbonImmutable::today($timezone)->toDateString()];
+            $endDate = CarbonImmutable::today($timezone);
+            $startDate = $endDate->subDays(6);
+
+            return collect(CarbonPeriod::create($startDate, $endDate))
+                ->map(fn ($date): string => CarbonImmutable::parse($date)->toDateString())
+                ->values()
+                ->all();
         }
 
         $startDate = $this->parseDateOption((string) $from, $timezone);
