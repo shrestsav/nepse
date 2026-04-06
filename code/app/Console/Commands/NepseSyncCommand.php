@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\SendsTelegramNotifications;
 use App\Enums\SyncMode;
 use App\Enums\SyncStatus;
 use App\Models\PriceHistory;
@@ -10,6 +11,7 @@ use App\Models\SyncLog;
 use App\Services\Nepse\MeroLaganiCatalogImporter;
 use App\Services\Nepse\NepaliPaisaDailyPriceSynchronizer;
 use App\Services\Nepse\SyncLogTracker;
+use App\Services\Notifications\TelegramNotifier;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
@@ -19,6 +21,8 @@ use Throwable;
 
 class NepseSyncCommand extends Command
 {
+    use SendsTelegramNotifications;
+
     /**
      * Daily:
      * `php artisan nepse:sync daily`
@@ -64,12 +68,19 @@ HELP;
         MeroLaganiCatalogImporter $catalogImporter,
         NepaliPaisaDailyPriceSynchronizer $dailyPriceSynchronizer,
         SyncLogTracker $tracker,
+        TelegramNotifier $telegramNotifier,
     ): int {
         try {
             $mode = $this->resolveMode();
             $this->guardUnsupportedOptions($mode);
         } catch (RuntimeException $exception) {
             $this->components->error($exception->getMessage());
+            $this->sendTelegramSummary(
+                $telegramNotifier,
+                'NEPSE Price Sync',
+                false,
+                ['Error: '.$exception->getMessage()],
+            );
 
             return self::FAILURE;
         }
@@ -79,6 +90,7 @@ HELP;
             'status' => SyncStatus::Queued,
             'start' => now(),
         ]);
+        $dateRange = null;
 
         try {
             $tracker->markRunning($syncLog);
@@ -108,6 +120,14 @@ HELP;
             if ($stocks->isEmpty()) {
                 $tracker->completeImmediately($syncLog, 0, 0);
                 $this->components->warn('No stocks were available to sync.');
+                $this->notifySyncOutcome(
+                    $telegramNotifier,
+                    $mode,
+                    $syncLog,
+                    $dateRange,
+                    true,
+                    ['No stocks were available to sync.'],
+                );
 
                 return self::SUCCESS;
             }
@@ -115,16 +135,42 @@ HELP;
             if ($dateRange === null) {
                 $tracker->completeImmediately($syncLog, $stocks->count(), 0);
                 $this->components->info('No trade dates required syncing for the requested smart range.');
+                $this->notifySyncOutcome(
+                    $telegramNotifier,
+                    $mode,
+                    $syncLog,
+                    $dateRange,
+                    true,
+                    ['No trade dates required syncing for the requested smart range.'],
+                );
 
                 return self::SUCCESS;
             }
 
-            return $mode === SyncMode::Full
+            $exitCode = $mode === SyncMode::Full
                 ? $this->runFullSync($syncLog, $stocks, $dateRange, $dailyPriceSynchronizer, $tracker)
                 : $this->runDateBasedSync($syncLog, $stocks, $dateRange, $dailyPriceSynchronizer, $tracker);
+
+            $this->notifySyncOutcome(
+                $telegramNotifier,
+                $mode,
+                $syncLog,
+                $dateRange,
+                $exitCode === self::SUCCESS,
+            );
+
+            return $exitCode;
         } catch (Throwable $throwable) {
             $tracker->fail($syncLog, $throwable->getMessage());
             $this->components->error($throwable->getMessage());
+            $this->notifySyncOutcome(
+                $telegramNotifier,
+                $mode,
+                $syncLog,
+                $dateRange,
+                false,
+                ['Error: '.$throwable->getMessage()],
+            );
 
             return self::FAILURE;
         }
@@ -394,5 +440,37 @@ HELP;
             ->map(fn (mixed $symbol): string => strtoupper(trim((string) $symbol)))
             ->filter()
             ->values();
+    }
+
+    /**
+     * @param array{start: CarbonImmutable, end: CarbonImmutable}|null $dateRange
+     * @param list<string> $extraLines
+     */
+    private function notifySyncOutcome(
+        TelegramNotifier $telegramNotifier,
+        SyncMode $mode,
+        SyncLog $syncLog,
+        ?array $dateRange,
+        bool $success,
+        array $extraLines = [],
+    ): void {
+        $fresh = $syncLog->fresh();
+        $status = $fresh?->status?->value ?? ($success ? SyncStatus::Completed->value : SyncStatus::Failed->value);
+        $dateRangeLabel = $dateRange === null
+            ? 'none'
+            : $dateRange['start']->toDateString().' to '.$dateRange['end']->toDateString();
+
+        $this->sendTelegramSummary(
+            $telegramNotifier,
+            'NEPSE Price Sync',
+            $success,
+            array_merge([
+                'Mode: '.$mode->value,
+                'Date Range: '.$dateRangeLabel,
+                'Sync Status: '.$status,
+                'Stocks Considered: '.($fresh?->processed_stocks ?? 0).'/'.($fresh?->total_stocks ?? 0),
+                'Stocks With Data: '.($fresh?->total_synced ?? 0),
+            ], $extraLines),
+        );
     }
 }

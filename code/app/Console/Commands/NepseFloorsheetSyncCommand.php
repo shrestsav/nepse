@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\SendsTelegramNotifications;
 use App\Services\Nepse\ChukulFloorsheetSynchronizer;
+use App\Services\Notifications\TelegramNotifier;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
@@ -11,6 +13,8 @@ use Throwable;
 
 class NepseFloorsheetSyncCommand extends Command
 {
+    use SendsTelegramNotifications;
+
     protected $signature = 'nepse:floorsheet-sync
         {--date= : Trade date to sync (YYYY-MM-DD)}
         {--from= : Start date for a backfill range (YYYY-MM-DD)}
@@ -18,7 +22,10 @@ class NepseFloorsheetSyncCommand extends Command
 
     protected $description = 'Sync NEPSE broker data and floorsheet trades from Chukul';
 
-    public function handle(ChukulFloorsheetSynchronizer $synchronizer): int
+    public function handle(
+        ChukulFloorsheetSynchronizer $synchronizer,
+        TelegramNotifier $telegramNotifier,
+    ): int
     {
         try {
             $tradeDates = $this->resolveTradeDates();
@@ -74,9 +81,30 @@ class NepseFloorsheetSyncCommand extends Command
             $this->line("Unresolved stock count: {$summary['unresolvedStocks']}");
             $this->line("Unresolved broker count: {$summary['unresolvedBrokers']}");
 
+            $this->sendTelegramSummary(
+                $telegramNotifier,
+                'NEPSE Floorsheet Sync',
+                true,
+                [
+                    'Trade Dates Processed: '.count($tradeDates),
+                    "Date Range: {$firstTradeDate} to {$lastTradeDate}",
+                    "Brokers Synced: {$brokersSynced}",
+                    "Pages Fetched: {$summary['pagesFetched']}",
+                    "Rows Imported/Updated: {$summary['rowsSynced']}",
+                    "Unresolved Stocks: {$summary['unresolvedStocks']}",
+                    "Unresolved Brokers: {$summary['unresolvedBrokers']}",
+                ],
+            );
+
             return self::SUCCESS;
         } catch (Throwable $throwable) {
             $this->components->error($throwable->getMessage());
+            $this->sendTelegramSummary(
+                $telegramNotifier,
+                'NEPSE Floorsheet Sync',
+                false,
+                ['Error: '.$throwable->getMessage()],
+            );
 
             return self::FAILURE;
         }

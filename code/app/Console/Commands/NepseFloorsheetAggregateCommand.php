@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\SendsTelegramNotifications;
 use App\Services\Nepse\FloorsheetAggregator;
+use App\Services\Notifications\TelegramNotifier;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Console\Command;
@@ -11,6 +13,8 @@ use Throwable;
 
 class NepseFloorsheetAggregateCommand extends Command
 {
+    use SendsTelegramNotifications;
+
     protected $signature = 'nepse:floorsheet-aggregate
         {--date= : Trade date to aggregate (YYYY-MM-DD)}
         {--from= : Start date for a rebuild range (YYYY-MM-DD)}
@@ -18,7 +22,10 @@ class NepseFloorsheetAggregateCommand extends Command
 
     protected $description = 'Aggregate NEPSE floorsheet rows from the raw floorsheets table';
 
-    public function handle(FloorsheetAggregator $aggregator): int
+    public function handle(
+        FloorsheetAggregator $aggregator,
+        TelegramNotifier $telegramNotifier,
+    ): int
     {
         try {
             $tradeDates = $this->resolveTradeDates();
@@ -42,9 +49,26 @@ class NepseFloorsheetAggregateCommand extends Command
             $this->line("Date range: {$firstTradeDate} to {$lastTradeDate}");
             $this->line("Aggregated rows rebuilt: {$rowsAggregated}");
 
+            $this->sendTelegramSummary(
+                $telegramNotifier,
+                'NEPSE Floorsheet Aggregate',
+                true,
+                [
+                    'Trade Dates Processed: '.count($tradeDates),
+                    "Date Range: {$firstTradeDate} to {$lastTradeDate}",
+                    "Aggregated Rows Rebuilt: {$rowsAggregated}",
+                ],
+            );
+
             return self::SUCCESS;
         } catch (Throwable $throwable) {
             $this->components->error($throwable->getMessage());
+            $this->sendTelegramSummary(
+                $telegramNotifier,
+                'NEPSE Floorsheet Aggregate',
+                false,
+                ['Error: '.$throwable->getMessage()],
+            );
 
             return self::FAILURE;
         }
