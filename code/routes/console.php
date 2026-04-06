@@ -29,6 +29,6 @@ Schedule::command('nepse:sync daily')
     ->withoutOverlapping();
 
 Schedule::command('nepse:floorsheet-sync')
-    ->dailyAt((string) config('nepse.sync.floorsheet_schedule_time', '18:45'))
-    ->timezone((string) config('app.timezone'))
+    ->dailyAt('11:15')
+    ->timezone('UTC')
     ->withoutOverlapping();
