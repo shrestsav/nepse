@@ -10,6 +10,7 @@ dataset('nepse routes', [
     'recommendations' => 'dashboard.recommendations',
     'watch stock' => 'dashboard.watch-stock',
     'sectors' => 'dashboard.sectors',
+    'strategies' => 'dashboard.strategies',
     'floorsheet' => 'dashboard.floorsheet',
     'sync' => 'dashboard.sync',
     'stocks' => 'dashboard.stocks',
@@ -117,6 +118,15 @@ test('supporting nepse pages render for authenticated users', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('nepse/Sectors')
             ->has('sectors'),
+        );
+
+    $this->actingAs($user)
+        ->get(route('dashboard.strategies'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('nepse/Strategies')
+            ->has('strategies', 1)
+            ->where('strategies.0.slug', 'broker-net-flow-imbalance-momentum'),
         );
 
     $this->actingAs($user)

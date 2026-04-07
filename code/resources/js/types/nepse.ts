@@ -205,3 +205,56 @@ export type BacktestStrategyOption = {
     value: string;
     label: string;
 };
+
+export type StrategyListItem = {
+    slug: string;
+    name: string;
+    summary: string;
+    url: string;
+};
+
+export type StrategyDetail = {
+    slug: string;
+    name: string;
+    summary: string;
+    thesis: string;
+    howComputed: string[];
+    entryRules: string[];
+    riskControls: string[];
+    backtestPlan: string[];
+};
+
+export type StrategyShowFilters = {
+    date: string | null;
+    minTurnover: number;
+    limit: number;
+};
+
+export type StrategyShowSummary = {
+    symbolsScanned: number;
+    symbolsPassingTurnover: number;
+    buyCandidates: number;
+    sellCandidates: number;
+    neutral: number;
+};
+
+export type StrategyBrokerAmount = {
+    brokerNo: string;
+    amount: number;
+};
+
+export type StrategyCandidateRow = {
+    symbol: string;
+    stockId: number | null;
+    close: number | null;
+    changePercent: number | null;
+    turnover: number;
+    netFlowTop5: number;
+    netFlowRatio: number;
+    buyerBrokers: number;
+    sellerBrokers: number;
+    dominanceRatio: number;
+    signal: 'buy' | 'sell' | 'neutral';
+    topBuyers: StrategyBrokerAmount[];
+    topSellers: StrategyBrokerAmount[];
+};

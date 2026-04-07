@@ -6,6 +6,7 @@ use App\Http\Controllers\Nepse\FloorsheetController;
 use App\Http\Controllers\Nepse\RecommendationController;
 use App\Http\Controllers\Nepse\SectorController;
 use App\Http\Controllers\Nepse\StockController;
+use App\Http\Controllers\Nepse\StrategyController;
 use App\Http\Controllers\Nepse\SyncController;
 use App\Http\Controllers\Nepse\WatchStockController;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +30,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard/sync', [SyncController::class, 'index'])->name('dashboard.sync');
     Route::post('dashboard/sync', [SyncController::class, 'store'])->name('dashboard.sync.store');
     Route::get('dashboard/sectors', [SectorController::class, 'index'])->name('dashboard.sectors');
+    Route::get('dashboard/strategies', [StrategyController::class, 'index'])->name('dashboard.strategies');
+    Route::get('dashboard/strategies/{slug}', [StrategyController::class, 'show'])->name('dashboard.strategies.show');
     Route::get('dashboard/stocks', [StockController::class, 'index'])->name('dashboard.stocks');
     Route::get('dashboard/stocks/{stock}', [StockController::class, 'show'])->name('dashboard.stocks.show');
 });

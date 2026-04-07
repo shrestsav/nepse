@@ -6,6 +6,7 @@ import {
     ChartCandlestick,
     LayoutGrid,
     RefreshCcw,
+    Sigma,
     TableProperties,
     TrendingUp,
 } from 'lucide-vue-next';
@@ -45,6 +46,11 @@ const mainNavItems: NavItem[] = [
         title: 'Sectors',
         href: '/dashboard/sectors',
         icon: Building2,
+    },
+    {
+        title: 'Strategies',
+        href: dashboardRoutes.strategies(),
+        icon: Sigma,
     },
     {
         title: 'Backtesting',
