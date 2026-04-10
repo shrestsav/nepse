@@ -2,9 +2,11 @@
 import { Link } from '@inertiajs/vue3';
 import {
     Activity,
+    FilePenLine,
     Building2,
     ChartCandlestick,
     LayoutGrid,
+    NotebookPen,
     RefreshCcw,
     Sigma,
     TableProperties,
@@ -24,53 +26,73 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import dashboardRoutes from '@/routes/dashboard';
-import type { NavItem } from '@/types';
+import type { NavGroup } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const navGroups: NavGroup[] = [
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
+        title: 'Platform',
+        items: [
+            {
+                title: 'Dashboard',
+                href: dashboard(),
+                icon: LayoutGrid,
+            },
+            {
+                title: 'Recommendations',
+                href: dashboardRoutes.recommendations(),
+                icon: TrendingUp,
+            },
+            {
+                title: 'Watch stock',
+                href: dashboardRoutes.watchStock(),
+                icon: Activity,
+            },
+            {
+                title: 'Sectors',
+                href: '/dashboard/sectors',
+                icon: Building2,
+            },
+            {
+                title: 'Strategies',
+                href: dashboardRoutes.strategies(),
+                icon: Sigma,
+            },
+            {
+                title: 'Backtesting',
+                href: '/dashboard/backtesting',
+                icon: ChartCandlestick,
+            },
+            {
+                title: 'Sync',
+                href: dashboardRoutes.sync(),
+                icon: RefreshCcw,
+            },
+            {
+                title: 'Floorsheet',
+                href: '/dashboard/floorsheet',
+                icon: TableProperties,
+            },
+            {
+                title: 'Stocks',
+                href: dashboardRoutes.stocks(),
+                icon: TableProperties,
+            },
+        ],
     },
     {
-        title: 'Recommendations',
-        href: dashboardRoutes.recommendations(),
-        icon: TrendingUp,
-    },
-    {
-        title: 'Watch stock',
-        href: dashboardRoutes.watchStock(),
-        icon: Activity,
-    },
-    {
-        title: 'Sectors',
-        href: '/dashboard/sectors',
-        icon: Building2,
-    },
-    {
-        title: 'Strategies',
-        href: dashboardRoutes.strategies(),
-        icon: Sigma,
-    },
-    {
-        title: 'Backtesting',
-        href: '/dashboard/backtesting',
-        icon: ChartCandlestick,
-    },
-    {
-        title: 'Sync',
-        href: dashboardRoutes.sync(),
-        icon: RefreshCcw,
-    },
-    {
-        title: 'Floorsheet',
-        href: '/dashboard/floorsheet',
-        icon: TableProperties,
-    },
-    {
-        title: 'Stocks',
-        href: dashboardRoutes.stocks(),
-        icon: TableProperties,
+        title: 'Blog',
+        items: [
+            {
+                title: 'Posts',
+                href: '/dashboard/blog/posts',
+                icon: NotebookPen,
+            },
+            {
+                title: 'New post',
+                href: '/dashboard/blog/posts/create',
+                icon: FilePenLine,
+            },
+        ],
     },
 ];
 
@@ -91,7 +113,7 @@ const mainNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :groups="navGroups" />
         </SidebarContent>
 
         <SidebarFooter>
